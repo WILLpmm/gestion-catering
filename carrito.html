@@ -1,0 +1,46 @@
+
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css"><title>Carrito</title></head>
+<body><header><strong>🛒 Carrito</strong><a href="cliente.html" class="btn">Volver</a></header>
+<div class="wrap"><div class="panel">
+<h2>Resumen</h2>
+<table id="cart-table">
+<tr><th>Servicio</th><th>Cantidad</th><th>Precio</th></tr>
+</table>
+<div class="total" id="cart-total">Total: S/0</div>
+<button id="checkout-btn">Continuar (siguiente etapa)</button>
+</div></div>
+<script>
+function checkLogin() {
+  if (sessionStorage.getItem('loggedIn') !== 'true') {
+    location = 'index.html';
+  }
+}
+function formatPrice(value) {
+  return 'S/' + Number(value).toLocaleString('es-PE');
+}
+document.addEventListener('DOMContentLoaded', function() {
+  checkLogin();
+  const params = new URLSearchParams(window.location.search);
+  const item = params.get('item');
+  const price = params.get('price');
+  const qty = Number(params.get('qty') || 1);
+  const table = document.getElementById('cart-table');
+  const totalElem = document.getElementById('cart-total');
+  const button = document.getElementById('checkout-btn');
+  if (item && price) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${item}</td><td>${qty}</td><td>${formatPrice(price)}</td>`;
+    table.appendChild(row);
+    totalElem.textContent = 'Total: ' + formatPrice(Number(price) * qty);
+    button.disabled = false;
+  } else {
+    const row = document.createElement('tr');
+    row.innerHTML = '<td colspan="3" style="text-align:center">No hay ningún elemento seleccionado.</td>';
+    table.appendChild(row);
+    totalElem.textContent = 'Total: S/0';
+    button.disabled = true;
+  }
+});
+</script>
+</body></html>
