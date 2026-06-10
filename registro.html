@@ -13,11 +13,11 @@ function hideMessage() {
   messageDiv.style.display = 'none';
 }
 function getClientAccounts() {
-  const stored = localStorage.getItem('clientAccounts');
+  const stored = sessionStorage.getItem('clientAccounts');
   return stored ? JSON.parse(stored) : [];
 }
 function saveClientAccounts(accounts) {
-  localStorage.setItem('clientAccounts', JSON.stringify(accounts));
+  sessionStorage.setItem('clientAccounts', JSON.stringify(accounts));
 }
 function registerClient() {
   hideMessage();
