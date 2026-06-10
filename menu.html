@@ -2,10 +2,36 @@
 <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="estilos.css"><title>Inicio</title></head>
 <body>
-<header><strong>🍽️ Sistema de Catering</strong><span>Inicio</span></header>
+<header><strong>🍽️ Sistema de Catering</strong><span>Inicio</span><a href="#" class="btn" id="logout-btn">Cerrar sesión</a></header>
 <div class="hero"><h1>Bienvenido</h1><p>Selecciona una opción</p></div>
 <div class="grid">
 <a class="tile" href="cliente.html" style="text-decoration:none;color:#111"><h2>👤 Cliente</h2><p>Crear pedido</p></a>
 <div class="tile"><h2>📊 Ventas</h2><p>Próximamente</p></div>
 <div class="tile"><h2>🚚 Logística</h2><p>Próximamente</p></div>
-</div></body></html>
+</div>
+<script>
+function checkLogin() {
+  if (sessionStorage.getItem('loggedIn') !== 'true') {
+    location = 'index.html';
+    return;
+  }
+  const role = sessionStorage.getItem('role');
+  if (role !== 'admin') {
+    location = 'cliente.html';
+  }
+}
+function logout() {
+  sessionStorage.removeItem('loggedIn');
+  sessionStorage.removeItem('username');
+  sessionStorage.removeItem('role');
+  location = 'index.html';
+}
+document.addEventListener('DOMContentLoaded', function() {
+  checkLogin();
+  document.getElementById('logout-btn').addEventListener('click', function(event) {
+    event.preventDefault();
+    logout();
+  });
+});
+</script>
+</body></html>

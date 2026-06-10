@@ -2,15 +2,77 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="estilos.css"><title>Login</title>
 <script>
-function ingresar(){
- if(usuario.value.trim()==''||password.value.trim()==''){alert('Complete los datos');return;}
- location='menu.html';
+function showError(message) {
+  const errorDiv = document.getElementById('login-error');
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
 }
+function hideError() {
+  const errorDiv = document.getElementById('login-error');
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+}
+function getClientAccounts() {
+  const stored = localStorage.getItem('clientAccounts');
+  return stored ? JSON.parse(stored) : [];
+}
+function findClient(username) {
+  return getClientAccounts().find(acc => acc.username.toLowerCase() === username.toLowerCase());
+}
+function ingresar() {
+  hideError();
+  const usuarioInput = document.getElementById('usuario');
+  const passwordInput = document.getElementById('password');
+  const usuario = usuarioInput.value.trim();
+  const password = passwordInput.value.trim();
+  const validPass = '1111';
+  if (!usuario || !password) {
+    showError('Por favor completa usuario y contraseña.');
+    return;
+  }
+  if (usuario.toLowerCase() === 'admin') {
+    if (password !== validPass) {
+      showError('Usuario o contraseña incorrectos. Intenta otra vez.');
+      return;
+    }
+    sessionStorage.setItem('loggedIn', 'true');
+    sessionStorage.setItem('username', usuario);
+    sessionStorage.setItem('role', 'admin');
+    location = 'menu.html';
+    return;
+  }
+  const account = findClient(usuario);
+  if (!account) {
+    showError('No existe una cuenta. Regístrate como cliente primero.');
+    return;
+  }
+  if (account.password !== password) {
+    showError('Usuario o contraseña incorrectos. Intenta otra vez.');
+    return;
+  }
+  sessionStorage.setItem('loggedIn', 'true');
+  sessionStorage.setItem('username', account.username);
+  sessionStorage.setItem('role', 'cliente');
+  location = 'cliente.html';
+}
+document.addEventListener('DOMContentLoaded', function () {
+  if (sessionStorage.getItem('loggedIn') === 'true') {
+    const savedRole = sessionStorage.getItem('role');
+    if (savedRole === 'admin') {
+      location = 'menu.html';
+    } else if (savedRole === 'cliente') {
+      location = 'cliente.html';
+    }
+  }
+});
 </script></head>
 <body class="login"><div class="card">
-<h1 style="text-align:center;color:#2563eb">🍽️ Servicios de Catering</h1>
-<p>Inicio de sesión</p>
+<h1>🍽️ Servicios de Catering</h1>
+<p class="subtitle">Ingresa tus credenciales para acceder al sistema.</p>
+<p class="note">Usuario administrador: <strong>admin</strong>. Contraseña: <strong>1111</strong>. Si eres cliente, regístrate primero.</p>
+<div id="login-error" class="error-message"></div>
 <input id="usuario" placeholder="Usuario">
 <input id="password" type="password" placeholder="Contraseña">
 <button onclick="ingresar()">Ingresar</button>
+<p class="center-text">¿No tienes cuenta? <a href="registro.html" class="link-button">Regístrate aquí</a></p>
 </div></body></html>

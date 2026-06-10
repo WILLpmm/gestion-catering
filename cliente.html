@@ -12,7 +12,21 @@
 </div>
 <h2>Menús disponibles</h2>
 <div class="cards">
-<div class="menu-card"><h3>Buffet Premium</h3><p>Ideal para eventos grandes.</p><p><b>S/1500</b></p><a class="btn" href="carrito.html">Agregar al carrito</a></div>
-<div class="menu-card"><h3>Asamblea escolar</h3><p>Bebidas y bocadillos.</p><p><b>S/500</b></p><a class="btn" href="carrito.html">Agregar al carrito</a></div>
-<div class="menu-card"><h3>Almuerzo Ejecutivo</h3><p>Menú corporativo.</p><p><b>S/900</b></p><a class="btn" href="carrito.html">Agregar al carrito</a></div>
-</div></div></body></html>
+<div class="menu-card"><h3>Buffet Premium</h3><p>Ideal para eventos grandes.</p><p><b>S/1500</b></p><a class="btn" href="carrito.html?item=Buffet%20Premium&price=1500">Agregar al carrito</a></div>
+<div class="menu-card"><h3>Asamblea escolar</h3><p>Bebidas y bocadillos.</p><p><b>S/500</b></p><a class="btn" href="carrito.html?item=Asamblea%20escolar&price=500">Agregar al carrito</a></div>
+<div class="menu-card"><h3>Almuerzo Ejecutivo</h3><p>Menú corporativo.</p><p><b>S/900</b></p><a class="btn" href="carrito.html?item=Almuerzo%20Ejecutivo&price=900">Agregar al carrito</a></div>
+</div></div>
+<script>
+function checkLogin() {
+  if (sessionStorage.getItem('loggedIn') !== 'true') {
+    location = 'index.html';
+    return;
+  }
+  const role = sessionStorage.getItem('role');
+  if (role !== 'cliente' && role !== 'admin') {
+    location = 'index.html';
+  }
+}
+document.addEventListener('DOMContentLoaded', checkLogin);
+</script>
+</body></html>

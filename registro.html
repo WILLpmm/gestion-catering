@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css"><title>Registro</title>
+<script>
+function showMessage(type, message) {
+  const messageDiv = document.getElementById('register-message');
+  messageDiv.textContent = message;
+  messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+  messageDiv.style.display = 'block';
+}
+function hideMessage() {
+  const messageDiv = document.getElementById('register-message');
+  messageDiv.textContent = '';
+  messageDiv.style.display = 'none';
+}
+function getClientAccounts() {
+  const stored = localStorage.getItem('clientAccounts');
+  return stored ? JSON.parse(stored) : [];
+}
+function saveClientAccounts(accounts) {
+  localStorage.setItem('clientAccounts', JSON.stringify(accounts));
+}
+function registerClient() {
+  hideMessage();
+  const username = document.getElementById('usuario').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const confirm = document.getElementById('password-confirm').value.trim();
+  if (!username || !password || !confirm) {
+    showMessage('error', 'Completa todos los campos para registrarte.');
+    return;
+  }
+  if (password !== confirm) {
+    showMessage('error', 'Las contraseñas no coinciden.');
+    return;
+  }
+  if (username.toLowerCase() === 'admin') {
+    showMessage('error', 'No puedes usar el nombre de usuario admin.');
+    return;
+  }
+  const accounts = getClientAccounts();
+  if (accounts.some(account => account.username.toLowerCase() === username.toLowerCase())) {
+    showMessage('error', 'Ese usuario ya existe. Elige uno distinto.');
+    return;
+  }
+  accounts.push({ username, password });
+  saveClientAccounts(accounts);
+  showMessage('success', 'Registro exitoso. Ahora puedes iniciar sesión.');
+  setTimeout(() => {
+    location = 'index.html';
+  }, 1500);
+}
+</script></head>
+<body class="login"><div class="card">
+<h1>Regístrate como cliente</h1>
+<p class="subtitle">Crea tu cuenta para acceder al área de cliente.</p>
+<div id="register-message" class="error-message"></div>
+<input id="usuario" placeholder="Usuario">
+<input id="password" type="password" placeholder="Contraseña">
+<input id="password-confirm" type="password" placeholder="Confirmar contraseña">
+<button onclick="registerClient()">Registrar</button>
+<p class="center-text">¿Ya tienes cuenta? <a href="index.html" class="link-button">Iniciar sesión</a></p>
+</div></body></html>
