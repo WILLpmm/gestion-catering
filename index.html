@@ -1,76 +1,364 @@
+<!DOCTYPE html>
 
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="estilos.css"><title>Login</title>
-<script>
-function showError(message) {
-  const errorDiv = document.getElementById('login-error');
-  errorDiv.textContent = message;
-  errorDiv.style.display = 'block';
-}
-function hideError() {
-  const errorDiv = document.getElementById('login-error');
-  errorDiv.textContent = '';
-  errorDiv.style.display = 'none';
-}
-function getClientAccounts() {
-  const stored = sessionStorage.getItem('clientAccounts');
-  return stored ? JSON.parse(stored) : [];
-}
-function findClient(username) {
-  return getClientAccounts().find(acc => acc.username.toLowerCase() === username.toLowerCase());
-}
-function ingresar() {
-  hideError();
-  const usuarioInput = document.getElementById('usuario');
-  const passwordInput = document.getElementById('password');
-  const usuario = usuarioInput.value.trim();
-  const password = passwordInput.value.trim();
-  const validPass = 'admin2026';
-  if (!usuario || !password) {
-    showError('Por favor completa usuario y contraseña.');
-    return;
-  }
-  if (usuario.toLowerCase() === 'admin') {
-    if (password !== validPass) {
-      showError('Usuario o contraseña incorrectos. Intenta otra vez.');
-      return;
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Elite Catering — Inicio</title>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+      try {
+        const res = await fetch('/api/session');
+        const s = await res.json();
+
+        const authLink = document.getElementById('auth-link');
+
+        if (s.loggedIn) {
+          if (s.role === 'cliente') {
+            document.getElementById('pedidos-link').style.display = 'inline-block';
+          }
+          authLink.textContent = 'Cerrar sesión';
+          authLink.href = '#';
+          authLink.style.color = '#dc3545';
+
+          authLink.onclick = async function (e) {
+            e.preventDefault();
+
+            const logoutRes = await fetch('/api/logout', {
+              method: 'POST'
+            });
+
+            const logoutData = await logoutRes.json();
+
+            if (logoutData.ok) {
+              location.reload();
+            }
+          };
+        }
+      } catch (e) {
+        console.log('Error de sesión');
+      }
+    });
+
+    /* ===================================
+       PANEL DE COTIZACIÓN INLINE
+    =================================== */
+    let menuCache = [];
+    let serviciosSeleccionados = {};
+    let cotizadorCargado = false;
+
+    function toggleCotizador() {
+      const panel = document.getElementById('panel-cotizador');
+      const visible = panel.style.display === 'block';
+      panel.style.display = visible ? 'none' : 'block';
+      document.getElementById('btn-toggle-cotizar').textContent = visible
+        ? '💬 Solicitar Cotización de tu Evento'
+        : '✖ Cerrar Cotizador';
+
+      if (!visible) {
+        if (!cotizadorCargado) { loadServiciosCotizador(); cotizadorCargado = true; }
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
-    sessionStorage.setItem('loggedIn', 'true');
-    sessionStorage.setItem('username', usuario);
-    sessionStorage.setItem('role', 'admin');
-    location = 'menu.html';
-    return;
-  }
-  const account = findClient(usuario);
-  if (!account) {
-    showError('No existe una cuenta. Regístrate como cliente primero.');
-    return;
-  }
-  if (account.password !== password) {
-    showError('Usuario o contraseña incorrectos. Intenta otra vez.');
-    return;
-  }
-  sessionStorage.setItem('loggedIn', 'true');
-  sessionStorage.setItem('username', account.username);
-  sessionStorage.setItem('role', 'cliente');
-  location = 'cliente.html';
-}
-document.addEventListener('DOMContentLoaded', function () {
-  if (sessionStorage.getItem('loggedIn') === 'true') {
-    const savedRole = sessionStorage.getItem('role');
-    if (savedRole === 'admin') {
-      location = 'menu.html';
-    } else if (savedRole === 'cliente') {
-      location = 'cliente.html';
+
+    function loadServiciosCotizador() {
+      fetch('/api/menu').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        menuCache = data.menu;
+        const container = document.getElementById('servicios-container');
+        container.innerHTML = '';
+        menuCache.forEach(m => {
+          const row = document.createElement('div');
+          row.className = 'servicio-row';
+          row.id = 'row-' + m.id;
+          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid #eee;border-radius:10px;margin-bottom:10px;';
+          row.innerHTML = `
+            <div class="servicio-info">
+              <strong style="display:block;">${m.nombre}</strong>
+              <span style="color:#28a745;font-weight:700;">S/${Number(m.precio).toLocaleString('es-PE')}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label><input type="checkbox" id="chk-${m.id}" onchange="toggleServicio('${m.id}')"> Incluir</label>
+              <input type="number" min="1" value="1" id="qty-${m.id}" disabled style="width:70px;text-align:center;margin:0;padding:8px;">
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      });
     }
-  }
-});
-</script></head>
-<body class="login"><div class="card">
-<h1>🍽️ Servicios de Catering</h1>
-<div id="login-error" class="error-message"></div>
-<input id="usuario" placeholder="Usuario" autocomplete="off">
-<input id="password" type="password" placeholder="Contraseña" autocomplete="off">
-<button onclick="ingresar()">Ingresar</button>
-<p class="center-text">¿No tienes cuenta? <a href="registro.html" class="link-button">Regístrate aquí</a></p>
-</div></body></html>
+
+    function toggleServicio(id) {
+      const checked = document.getElementById('chk-' + id).checked;
+      document.getElementById('qty-' + id).disabled = !checked;
+      const row = document.getElementById('row-' + id);
+      row.style.borderColor = checked ? '#d99000' : '#eee';
+      row.style.background = checked ? '#fff8ec' : 'transparent';
+    }
+
+    function formatPriceCot(value) { return 'S/' + Number(value).toLocaleString('es-PE'); }
+
+    function calcularCotizacion() {
+      const nombre = document.getElementById('cot-nombre').value.trim();
+      const telefono = document.getElementById('cot-telefono').value.trim();
+      const evento = document.getElementById('cot-evento').value;
+      const fecha = document.getElementById('cot-fecha').value;
+      const persons = document.getElementById('cot-personas').value;
+
+      if (!nombre || !evento || !persons) {
+        alert('Completa al menos tu nombre, el tipo de evento y la cantidad de personas.');
+        return;
+      }
+
+      const servicios = menuCache
+        .filter(m => document.getElementById('chk-' + m.id).checked)
+        .map(m => ({ id: m.id, nombre: m.nombre, qty: Number(document.getElementById('qty-' + m.id).value || 1) }));
+
+      if (servicios.length === 0) {
+        alert('Selecciona al menos un servicio para cotizar.');
+        return;
+      }
+
+      fetch('/api/cotizaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, telefono, evento, fecha, persons, servicios })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'No se pudo calcular la cotización'); return; }
+
+        const cot = data.cotizacion;
+        serviciosSeleccionados = {
+          clientInfo: { cliente: nombre, evento, fecha, persons: Number(persons) },
+          cart: servicios.map(s => {
+            const def = menuCache.find(m => m.id === s.id);
+            return { item: def.nombre, price: def.precio, qty: s.qty };
+          })
+        };
+
+        const tbody = document.getElementById('resultado-detalle');
+        tbody.innerHTML = cot.detalle.map(d => `<tr><td>${d.nombre}</td><td>${d.qty}</td><td>${formatPriceCot(d.precioUnitario)}</td><td>${formatPriceCot(d.subtotal)}</td></tr>`).join('');
+        document.getElementById('resultado-subtotal').textContent = formatPriceCot(cot.subtotal);
+        document.getElementById('resultado-igv').textContent = formatPriceCot(cot.igv);
+        document.getElementById('resultado-total').textContent = formatPriceCot(cot.total);
+        document.getElementById('resultado-box').style.display = 'block';
+        document.getElementById('resultado-box').scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+
+    function convertirEnPedido() {
+      if (!serviciosSeleccionados.cart) return;
+      sessionStorage.setItem('cart', JSON.stringify(serviciosSeleccionados.cart));
+      sessionStorage.setItem('clientInfo', JSON.stringify(serviciosSeleccionados.clientInfo));
+      alert('Tus servicios se cargaron en el carrito. Inicia sesión o regístrate como cliente para completar tu pedido.');
+      location = 'carrito.html';
+    }
+  </script>
+
+</head>
+
+<body>
+
+<header>
+
+  <div class="logo-container">
+    <img src="imagenes/logo.png" alt="Elite Catering" class="logo">
+
+```
+<div>
+  <strong>Elite Catering</strong>
+  <span>— Calidad y sabor para tu evento</span>
+</div>
+```
+
+  </div>
+
+  <nav class="nav-container">
+    <a href="index.html" class="nav-link">Inicio</a>
+    <a href="catalogo.html" class="nav-link">Catálogo</a>
+    <a href="carrito.html" class="nav-link">🛒 Carrito</a>
+    <a href="seguimiento.html" id="pedidos-link" class="nav-link" style="display:none;">📦 Mis Pedidos</a>
+    <a href="login.html" id="auth-link" class="nav-link auth-link-style">
+      Iniciar sesión
+    </a>
+  </nav>
+
+</header>
+
+<main>
+
+  <section class="hero-landing">
+    <h1>El mejor catering para tus momentos especiales</h1>
+
+```
+<p style="font-size:1.1rem;max-width:900px;margin:12px auto;">
+  Combinamos tradición y creatividad para ofrecer menús personalizados,
+  entrega puntual y atención profesional.
+  Tu evento, nuestra pasión.
+</p>
+
+<p style="font-weight:800;font-size:1.2rem;margin-top:8px;">
+  "Sabor que une, servicio que inspira"
+</p>
+```
+
+  </section>
+
+  <section class="catalogo-servicios">
+
+```
+<h2 class="titulo-servicios">
+  Nuestros Servicios de Catering mas populares
+</h2>
+
+<div class="services">
+
+  <div class="service-card">
+    <img
+      src="imagenes/buffet.jpg"
+      alt="Buffet Premium"
+      class="service-img">
+
+    <h3>Buffet Premium</h3>
+
+    <p>
+      Ideal para bodas, aniversarios y eventos corporativos.
+      Incluye entradas, platos de fondo, postres,
+      bebidas y personal de atención.
+    </p>
+  </div>
+
+  <div class="service-card">
+    <img
+      src="imagenes/escolar.jpg"
+      alt="Asamblea Escolar"
+      class="service-img">
+
+    <h3>Asamblea Escolar</h3>
+
+    <p>
+      Servicio diseñado para colegios e instituciones.
+      Incluye bocadillos, refrescos,
+      café y atención personalizada.
+    </p>
+  </div>
+
+  <div class="service-card">
+    <img
+      src="imagenes/ejecutivo.jpg"
+      alt="Almuerzo Ejecutivo"
+      class="service-img">
+
+    <h3>Almuerzo Ejecutivo</h3>
+
+    <p>
+      Perfecto para reuniones empresariales.
+      Incluye entrada, plato principal,
+      bebida y postre.
+    </p>
+  </div>
+
+</div>
+```
+
+  </section>
+
+  <section class="catalogo-servicios" style="text-align:center;">
+    <button class="btn" id="btn-toggle-cotizar" onclick="toggleCotizador()" style="font-size:1.05rem;padding:16px 30px;">
+      💬 Solicitar Cotización de tu Evento
+    </button>
+    <p class="note" style="max-width:600px;margin:12px auto 0;">
+      Obtén un estimado instantáneo de cuánto te costaría tu evento, sin
+      necesidad de iniciar sesión ni de comprometerte a un pedido.
+    </p>
+
+    <div id="panel-cotizador" style="display:none;margin-top:30px;text-align:left;">
+
+      <div class="panel">
+        <h2>1. Tus datos</h2>
+        <div class="form-grid">
+          <input id="cot-nombre" placeholder="Nombre completo">
+          <input id="cot-telefono" placeholder="Teléfono (opcional)">
+          <select id="cot-evento">
+            <option value="">Tipo de evento</option>
+            <option value="Boda">Boda</option>
+            <option value="Cumpleaños">Cumpleaños</option>
+            <option value="Corporativo">Corporativo</option>
+            <option value="Evento escolar">Evento escolar</option>
+            <option value="Otro">Otro</option>
+          </select>
+          <input id="cot-fecha" type="date" placeholder="Fecha tentativa">
+          <input id="cot-personas" type="number" min="1" placeholder="Cantidad de personas" value="50">
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>2. Elige los servicios que te interesan</h2>
+        <div id="servicios-container"><p class="note">Cargando servicios...</p></div>
+      </div>
+
+      <div class="panel" style="text-align:center;">
+        <button class="btn" onclick="calcularCotizacion()">Calcular Cotización Estimada</button>
+      </div>
+
+      <div class="panel resultado-box" id="resultado-box" style="display:none;">
+        <h2>📄 Tu cotización estimada</h2>
+        <table>
+          <thead><tr><th>Servicio</th><th>Cantidad</th><th>Precio Unit.</th><th>Subtotal</th></tr></thead>
+          <tbody id="resultado-detalle"></tbody>
+        </table>
+        <div class="totales">
+          <h2>Subtotal: <span id="resultado-subtotal">S/0</span></h2>
+          <h2>IGV (18%): <span id="resultado-igv">S/0</span></h2>
+          <h2 class="total-final">Total estimado: <span id="resultado-total">S/0</span></h2>
+        </div>
+        <div class="alert-box alert-info" style="margin-top:15px;">
+          Este es solo un estimado referencial. Para confirmarlo como un pedido
+          real, con coordinación de fecha, lugar y forma de pago, continúa al
+          carrito.
+        </div>
+        <div class="footer-buttons">
+          <button class="btn" onclick="convertirEnPedido()">Convertir en pedido real 🛒</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  </main>
+
+<footer class="footer">
+
+  <div class="footer-content">
+
+```
+<div class="footer-section">
+  <h3>🍽️ Elite Catering</h3>
+
+  <p>
+    Especialistas en catering para bodas,
+    eventos corporativos, cumpleaños
+    y celebraciones especiales.
+  </p>
+</div>
+
+<div class="footer-section">
+  <h3>Contacto</h3>
+
+  <p>📞 +51 963 756 182</p>
+  <p>✉ contacto@elitecatering.com</p>
+  <p>📍 Lima, Perú</p>
+</div>
+
+```
+
+  </div>
+
+  <div class="footer-bottom">
+    © 2026 Elite Catering Premium | Todos los derechos reservados
+  </div>
+
+</footer>
+
+</body>
+</html>

@@ -1,37 +1,444 @@
-
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="estilos.css"><title>Inicio</title></head>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Elite Catering — Panel Administrativo</title>
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .app-container { display: flex; flex: 1; overflow: hidden; }
+    .sidebar-vertical { width: 270px; background: #1f1f1f; display: flex; flex-direction: column; padding-top: 15px; border-right: 4px solid #d99000; overflow-y:auto; }
+    .sidebar-item { padding: 16px 20px; color: #ddd; text-decoration: none; font-weight: 600; cursor: pointer; border-left: 4px solid transparent; transition: all 0.3s; display:block; }
+    .sidebar-item:hover { background-color: #343434; color: #ffb300; }
+    .sidebar-item.active { background-color: #343434; color: #ffb300; border-left: 4px solid #d99000; }
+    .sidebar-section-title{ color:#777; font-size:.75rem; text-transform:uppercase; letter-spacing:1px; padding:18px 20px 6px; }
+    .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+    .quick-links{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
+    .quick-links a{ flex:1; min-width:180px; }
+  </style>
+</head>
 <body>
-<header><strong>🍽️ Sistema de Catering</strong><span>Inicio</span><a href="#" class="btn" id="logout-btn">Cerrar sesión</a></header>
-<div class="hero"><h1>Bienvenido</h1><p>Selecciona una opción</p></div>
-<div class="grid">
-<a class="tile" href="cliente.html" style="text-decoration:none;color:#111"><h2>👤 Cliente</h2><p>Crear pedido</p></a>
-<div class="tile"><h2>📊 Ventas</h2><p>Próximamente</p></div>
-<div class="tile"><h2>🚚 Logística</h2><p>Próximamente</p></div>
-</div>
-<script>
-function checkLogin() {
-  if (sessionStorage.getItem('loggedIn') !== 'true') {
-    location = 'index.html';
-    return;
-  }
-  const role = sessionStorage.getItem('role');
-  if (role !== 'admin') {
-    location = 'cliente.html';
-  }
-}
-function logout() {
-  sessionStorage.removeItem('loggedIn');
-  sessionStorage.removeItem('username');
-  sessionStorage.removeItem('role');
-  location = 'index.html';
-}
-document.addEventListener('DOMContentLoaded', function() {
-  checkLogin();
-  document.getElementById('logout-btn').addEventListener('click', function(event) {
-    event.preventDefault();
-    logout();
-  });
-});
-</script>
-</body></html>
+
+  <header>
+    <div>
+      <strong>🍽️ Elite Catering</strong>
+      <span>— Panel de Control General</span>
+    </div>
+    <div>
+      <span id="admin-name" style="margin-right: 15px; font-weight: bold;">Administrador</span>
+      <a href="#" class="btn-small btn-small-primary" onclick="logout(); return false;">Cerrar Sesión</a>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <aside class="sidebar-vertical">
+      <div class="sidebar-item active" onclick="changeSection('dashboard', this)">📊 Dashboard General</div>
+      <div class="sidebar-item" onclick="changeSection('usuarios', this)">👥 Usuarios y Clientes</div>
+      <div class="sidebar-item" onclick="changeSection('capacidad', this)">⚙️ Capacidad Operativa</div>
+      <div class="sidebar-item" onclick="changeSection('proveedores', this)">🤝 Proveedores</div>
+      <div class="sidebar-item" onclick="changeSection('incidencias', this)">🧯 Incidencias</div>
+      <div class="sidebar-item" onclick="changeSection('personal', this)">👔 Personal de Servicio</div>
+
+      <div class="sidebar-section-title">Áreas operativas</div>
+      <a href="ventas.html" class="sidebar-item">💼 Panel de Ventas</a>
+      <a href="logistica.html" class="sidebar-item">🚚 Panel de Logística</a>
+      <a href="cocina.html" class="sidebar-item">🍳 Panel de Cocina</a>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="tab-view active">
+        <div class="panel">
+          <h1>Estadísticas Generales</h1>
+          <div class="stats-grid">
+            <div class="stat-card"><h3><span id="total-users">0</span></h3><p>Clientes Registrados</p></div>
+            <div class="stat-card"><h3><span id="total-pendientes">0</span></h3><p>Pedidos Pendientes (Ventas)</p></div>
+            <div class="stat-card"><h3><span id="total-produccion">0</span></h3><p>En Producción / Logística</p></div>
+            <div class="stat-card"><h3><span id="total-entregados">0</span></h3><p>Entregados / Cerrados</p></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Accesos rápidos</h2>
+          <div class="quick-links">
+            <a href="ventas.html" class="btn">💼 Ir a Ventas</a>
+            <a href="logistica.html" class="btn">🚚 Ir a Logística</a>
+            <a href="cocina.html" class="btn">🍳 Ir a Cocina</a>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Todos los Pedidos</h2>
+          <table>
+            <thead><tr><th>Código</th><th>Cliente</th><th>Fecha</th><th>Estado</th></tr></thead>
+            <tbody id="orders-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- USUARIOS -->
+      <section id="usuarios" class="tab-view">
+        <div class="panel">
+          <h1>👥 Usuarios del Sistema</h1>
+          <table>
+            <thead><tr><th>Usuario</th><th>Rol</th></tr></thead>
+            <tbody id="users-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h2>Crear cuenta de personal interno</h2>
+          <p class="note">Crea accesos para nuevos integrantes de Ventas, Logística, Cocina o Personal de servicio.</p>
+          <div class="form-grid">
+            <input id="new-user-username" placeholder="Usuario">
+            <input id="new-user-password" type="password" placeholder="Contraseña">
+            <select id="new-user-role">
+              <option value="ventas">Ejecutivo de Ventas</option>
+              <option value="logistica">Logística</option>
+              <option value="cocina">Cocina</option>
+              <option value="personal">Personal de Servicio (mozo)</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <button class="btn" style="margin-top:12px;" onclick="crearUsuario()">Crear cuenta</button>
+        </div>
+      </section>
+
+      <!-- CAPACIDAD OPERATIVA -->
+      <section id="capacidad" class="tab-view">
+        <div class="panel">
+          <h1>⚙️ Capacidad Operativa</h1>
+          <p class="note">Estos límites se usan para bloquear fechas y alertar a Logística cuando se supera la capacidad de Cocina, vajilla o personal disponible.</p>
+          <div class="form-grid" style="margin-top:15px;">
+            <div>
+              <label>Máx. eventos por día</label>
+              <input type="number" id="cap-eventos">
+            </div>
+            <div>
+              <label>Máx. vajilla disponible</label>
+              <input type="number" id="cap-vajilla">
+            </div>
+            <div>
+              <label>Máx. personal disponible</label>
+              <input type="number" id="cap-personal">
+            </div>
+          </div>
+          <button class="btn" style="margin-top:15px;" onclick="guardarCapacidad()">Guardar límites</button>
+        </div>
+
+        <div class="panel">
+          <h2>Consultar ocupación de una fecha</h2>
+          <input type="date" id="fecha-consulta" onchange="consultarOcupacion()" style="max-width:250px;">
+          <div id="ocupacion-result" style="margin-top:15px;"></div>
+        </div>
+      </section>
+
+      <!-- PROVEEDORES -->
+      <section id="proveedores" class="tab-view">
+        <div class="panel">
+          <h1>🤝 Proveedores Externos</h1>
+          <table>
+            <thead><tr><th>Nombre</th><th>Servicio</th><th>Costo</th><th>Acción</th></tr></thead>
+            <tbody id="proveedores-table-body"></tbody>
+          </table>
+          <h3 style="margin-top:20px;color:#d99000;">Registrar nuevo proveedor</h3>
+          <div class="form-grid">
+            <input id="prov-nombre" placeholder="Nombre">
+            <input id="prov-servicio" placeholder="Servicio">
+            <input id="prov-costo" type="number" placeholder="Costo (S/)">
+          </div>
+          <button class="btn" style="margin-top:12px;" onclick="agregarProveedor()">Registrar</button>
+        </div>
+      </section>
+
+      <!-- INCIDENCIAS -->
+      <section id="incidencias" class="tab-view">
+        <div class="panel">
+          <h1>🧯 Gestión de Incidencias</h1>
+          <p class="note">Registra y resuelve incidencias reportadas por cualquier área (Logística, Cocina, Ventas).</p>
+          <div class="form-grid">
+            <input id="inc-orderId" placeholder="Código de pedido (opcional)">
+            <select id="inc-gravedad">
+              <option value="baja">Gravedad: Baja</option>
+              <option value="media" selected>Gravedad: Media</option>
+              <option value="alta">Gravedad: Alta</option>
+            </select>
+          </div>
+          <textarea id="inc-descripcion" rows="2" placeholder="Descripción de la incidencia"></textarea>
+          <button class="btn" style="margin-top:10px;" onclick="reportarIncidencia()">Reportar incidencia</button>
+
+          <div id="incidencias-container" style="margin-top:25px;"></div>
+        </div>
+      </section>
+
+      <!-- PERSONAL -->
+      <section id="personal" class="tab-view">
+        <div class="panel">
+          <h1>👔 Personal de Servicio — Asignaciones</h1>
+          <p class="note">Vista general de qué eventos tiene asignado cada mozo/personal de servicio. La asignación se gestiona desde el Panel de Ventas.</p>
+          <div id="personal-container"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    function changeSection(sectionId, el) {
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+      el.classList.add('active');
+    }
+
+    function checkLogin() {
+      fetch('/api/session').then(r => r.json()).then(s => {
+        if (!s.loggedIn) { location = 'login.html'; return; }
+        if (s.role !== 'admin') { location = 'cliente.html'; return; }
+        document.getElementById('admin-name').textContent = '👤 Admin: ' + s.username;
+        loadAll();
+      }).catch(() => { location = 'login.html'; });
+    }
+
+    function logout() {
+      fetch('/api/logout', { method: 'POST' }).finally(() => location = 'login.html');
+    }
+
+    function formatPrice(value) { return 'S/' + Number(value).toLocaleString('es-PE'); }
+
+    function loadDashboard() {
+      fetch('/api/users').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const soloClientes = data.users.filter(u => u.role === 'cliente');
+        document.getElementById('total-users').textContent = soloClientes.length;
+
+        const tbody = document.getElementById('users-table-body');
+        tbody.innerHTML = '';
+        data.users.forEach(u => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>👤 ${u.username}</td><td>${u.role}</td>`;
+          tbody.appendChild(row);
+        });
+      });
+
+      fetch('/api/orders').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const pendientes = data.orders.filter(o => o.status === 'pendiente').length;
+        const produccion = data.orders.filter(o => ['confirmado','pago_confirmado','aceptado','en_preparacion','listo_despacho','en_ruta'].includes(o.status)).length;
+        const entregados = data.orders.filter(o => ['entregado','cerrado'].includes(o.status)).length;
+
+        document.getElementById('total-pendientes').textContent = pendientes;
+        document.getElementById('total-produccion').textContent = produccion;
+        document.getElementById('total-entregados').textContent = entregados;
+
+        const tbody = document.getElementById('orders-table-body');
+        tbody.innerHTML = '';
+        data.orders.slice().reverse().forEach(order => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${order.id}</td>
+            <td>${order.clientInfo.cliente}</td>
+            <td>${order.clientInfo.fecha}</td>
+            <td><span class="badge badge-${order.status}">${order.status.replace('_',' ')}</span></td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // Personal: agrupar asignaciones
+        const personalMap = {};
+        data.orders.forEach(o => {
+          (o.personalAsignado || []).forEach(p => {
+            if (!personalMap[p]) personalMap[p] = [];
+            personalMap[p].push(o);
+          });
+        });
+        const personalContainer = document.getElementById('personal-container');
+        personalContainer.innerHTML = '';
+        const nombres = Object.keys(personalMap);
+        if (nombres.length === 0) {
+          personalContainer.innerHTML = '<p class="note">Aún no se ha asignado personal a ningún evento.</p>';
+        } else {
+          nombres.forEach(nombre => {
+            const div = document.createElement('div');
+            div.className = 'order-card';
+            div.innerHTML = `<h3 style="color:#d99000;">👤 ${nombre}</h3>` +
+              personalMap[nombre].map(o => `<p class="order-meta">${o.id} — ${o.clientInfo.evento} (${o.clientInfo.fecha})</p>`).join('');
+            personalContainer.appendChild(div);
+          });
+        }
+      });
+    }
+
+    function loadCapacidad() {
+      fetch('/api/capacidad').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        document.getElementById('cap-eventos').value = data.capacidad.maxEventosPorDia;
+        document.getElementById('cap-vajilla').value = data.capacidad.maxVajillaDisponible;
+        document.getElementById('cap-personal').value = data.capacidad.maxPersonalDisponible;
+      });
+    }
+
+    function guardarCapacidad() {
+      const maxEventosPorDia = document.getElementById('cap-eventos').value;
+      const maxVajillaDisponible = document.getElementById('cap-vajilla').value;
+      const maxPersonalDisponible = document.getElementById('cap-personal').value;
+      fetch('/api/capacidad', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxEventosPorDia, maxVajillaDisponible, maxPersonalDisponible })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert('No se pudo guardar'); return; }
+        alert('Límites de capacidad actualizados correctamente.');
+      });
+    }
+
+    function consultarOcupacion() {
+      const fecha = document.getElementById('fecha-consulta').value;
+      if (!fecha) return;
+      fetch('/api/capacidad/' + fecha).then(r => r.json()).then(data => {
+        const div = document.getElementById('ocupacion-result');
+        if (!data.ok) return;
+        const o = data.ocupacion;
+        const excede = o.excedeEventos || o.excedeVajilla || o.excedePersonal;
+        div.innerHTML = `
+          <div class="alert-box ${excede ? 'alert-danger' : 'alert-success'}">
+            ${excede ? '⚠️ Capacidad excedida' : '✅ Dentro de capacidad'} para ${o.fecha}
+          </div>
+          <div class="capacity-row" style="display:flex;justify-content:space-between;padding:6px 0;"><span>Eventos programados</span><strong>${o.eventos} / ${o.limites.maxEventosPorDia}</strong></div>
+          <div class="capacity-row" style="display:flex;justify-content:space-between;padding:6px 0;"><span>Vajilla comprometida</span><strong>${o.vajilla} / ${o.limites.maxVajillaDisponible}</strong></div>
+          <div class="capacity-row" style="display:flex;justify-content:space-between;padding:6px 0;"><span>Personal comprometido</span><strong>${o.personal} / ${o.limites.maxPersonalDisponible}</strong></div>
+        `;
+      });
+    }
+
+    function loadProveedores() {
+      fetch('/api/proveedores').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const tbody = document.getElementById('proveedores-table-body');
+        tbody.innerHTML = '';
+        data.proveedores.forEach(p => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${p.nombre}</td><td>${p.servicio}</td><td>${formatPrice(p.costo)}</td>
+            <td><button onclick="eliminarProveedor('${p.id}')" class="btn-danger-outline" style="width:auto;min-width:auto;padding:6px 12px;">Eliminar</button></td>`;
+          tbody.appendChild(row);
+        });
+      });
+    }
+
+    function agregarProveedor() {
+      const nombre = document.getElementById('prov-nombre').value.trim();
+      const servicio = document.getElementById('prov-servicio').value.trim();
+      const costo = document.getElementById('prov-costo').value;
+      if (!nombre || !servicio || !costo) { alert('Completa todos los campos'); return; }
+      fetch('/api/proveedores', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, servicio, costo })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'Error'); return; }
+        document.getElementById('prov-nombre').value = '';
+        document.getElementById('prov-servicio').value = '';
+        document.getElementById('prov-costo').value = '';
+        loadProveedores();
+      });
+    }
+
+    function eliminarProveedor(id) {
+      if (!confirm('¿Eliminar este proveedor?')) return;
+      fetch('/api/proveedores/' + id, { method: 'DELETE' }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert('No se pudo eliminar'); return; }
+        loadProveedores();
+      });
+    }
+
+    function loadIncidencias() {
+      fetch('/api/incidencias').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const container = document.getElementById('incidencias-container');
+        container.innerHTML = '';
+        if (data.incidencias.length === 0) {
+          container.innerHTML = '<p class="note">No hay incidencias registradas.</p>';
+          return;
+        }
+        data.incidencias.slice().reverse().forEach(inc => {
+          const div = document.createElement('div');
+          div.className = 'order-card';
+          div.innerHTML = `
+            <div class="order-card-header">
+              <div>
+                <span class="order-card-id">${inc.id}</span> ${inc.orderId ? '— Pedido ' + inc.orderId : ''}
+                <div class="order-meta">Reportado por ${inc.reportadoPor} · Gravedad: ${inc.gravedad}</div>
+              </div>
+              <span class="badge ${inc.estado === 'resuelta' ? 'badge-entregado' : 'badge-rechazado'}">${inc.estado}</span>
+            </div>
+            <p>${inc.descripcion}</p>
+            ${inc.estado === 'abierta' ? `<div class="order-actions"><button onclick="resolverIncidencia('${inc.id}')" style="background:#28a745;">Marcar como resuelta</button></div>` : `<p class="note">Resolución: ${inc.resolucion || '-'}</p>`}
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function reportarIncidencia() {
+      const orderId = document.getElementById('inc-orderId').value.trim();
+      const gravedad = document.getElementById('inc-gravedad').value;
+      const descripcion = document.getElementById('inc-descripcion').value.trim();
+      if (!descripcion) { alert('Describe la incidencia'); return; }
+      fetch('/api/incidencias', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, gravedad, descripcion })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'Error'); return; }
+        document.getElementById('inc-orderId').value = '';
+        document.getElementById('inc-descripcion').value = '';
+        loadIncidencias();
+      });
+    }
+
+    function resolverIncidencia(id) {
+      const resolucion = prompt('Describe brevemente la resolución:') || '';
+      fetch('/api/incidencias/' + id + '/resolver', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolucion })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert('No se pudo resolver'); return; }
+        loadIncidencias();
+      });
+    }
+
+    function crearUsuario() {
+      const username = document.getElementById('new-user-username').value.trim();
+      const password = document.getElementById('new-user-password').value.trim();
+      const role = document.getElementById('new-user-role').value;
+      if (!username || !password) { alert('Completa usuario y contraseña'); return; }
+      fetch('/api/users', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'No se pudo crear el usuario'); return; }
+        alert('Cuenta creada correctamente: ' + username + ' (' + role + ')');
+        document.getElementById('new-user-username').value = '';
+        document.getElementById('new-user-password').value = '';
+        loadDashboard();
+      });
+    }
+
+    function loadAll() {
+      loadDashboard();
+      loadCapacidad();
+      loadProveedores();
+      loadIncidencias();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      checkLogin();
+      setInterval(loadAll, 15000);
+    });
+  </script>
+</body>
+</html>
+
+

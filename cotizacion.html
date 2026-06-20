@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css">
+<title>Cotización | Elite Catering Premium</title>
+</head>
+<body>
+<header>
+    <strong>🍽️ Elite Catering Premium</strong>
+    <span>Cotización de Servicios</span>
+</header>  
+<div class="contenedor">
+<div class="resumen">
+<h3>Cliente: <strong id="cliente-cotizacion"></strong></h3>
+<h3>Evento: <strong id="evento-cotizacion"></strong></h3>
+<h3>Fecha: <strong id="fecha-cotizacion"></strong></h3>
+</div>
+<table>
+<tr><th>Servicio</th><th>Cantidad</th><th>Precio Unit.</th><th>Subtotal</th></tr>
+<tbody id="items-cotizacion"></tbody>
+</table>
+<div class="totales">
+<h2>Subtotal: <span id="subtotal">S/0</span></h2>
+<h2>IGV (18%): <span id="igv">S/0</span></h2>
+<h2 class="total-final">Total: <span id="total-final">S/0</span></h2>
+</div>
+<button onclick="confirmarPedido()">Confirmar Pedido</button>
+<div class="footer-buttons">
+<a href="cliente.html" class="btn-small">Volver</a>
+</div>
+</div>
+<script>
+function checkLogin() {
+  fetch('/api/session').then(r=>r.json()).then(s=>{
+    if (!s.loggedIn) { location = 'index.html'; return; }
+    if (s.role !== 'cliente' && s.role !== 'admin') { location = 'index.html'; }
+  }).catch(()=>{ location = 'index.html'; });
+}
+function formatPrice(value) {
+  return 'S/' + Number(value).toLocaleString('es-PE');
+}
+async function confirmarPedido() {
+  const cotizacion = JSON.parse(sessionStorage.getItem('cotizacion') || '{}');
+  if (!cotizacion || !cotizacion.clientInfo || !cotizacion.cart || cotizacion.cart.length === 0) {
+    alert('No hay datos de cotización válidos para enviar.');
+    return;
+  }
+  try {
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cotizacion)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al enviar el pedido');
+    }
+    alert('Pedido enviado correctamente con código ' + data.order.id + '. Nuestro equipo de Ventas lo revisará y coordinará contigo los detalles del evento. Podrás ver el avance en "Mis Pedidos".');
+    sessionStorage.removeItem('cotizacion');
+    sessionStorage.removeItem('cart');
+    sessionStorage.removeItem('clientInfo');
+    location = 'seguimiento.html';
+  } catch (error) {
+    alert('No se pudo enviar el pedido: ' + error.message);
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  checkLogin();
+  const cotizacion = JSON.parse(sessionStorage.getItem('cotizacion') || '{}');
+  if (!cotizacion || !cotizacion.clientInfo || !cotizacion.cart || cotizacion.cart.length === 0) {
+    location = 'cliente.html';
+    return;
+  }
+  const client = cotizacion.clientInfo;
+  document.getElementById('cliente-cotizacion').textContent = client.cliente || '-';
+  document.getElementById('evento-cotizacion').textContent = client.evento || '-';
+  document.getElementById('fecha-cotizacion').textContent = client.fecha || '-';
+  const itemsTable = document.getElementById('items-cotizacion');
+  let subtotal = 0;
+  cotizacion.cart.forEach(it => {
+    const unitPrice = Number(it.price);
+    const qty = Number(it.qty || 1);
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${it.item}</td><td>${qty}</td><td>${formatPrice(unitPrice)}</td><td>${formatPrice(unitPrice * qty)}</td>`;
+    itemsTable.appendChild(row);
+    subtotal += unitPrice * qty;
+  });
+  const igv = subtotal * 0.18;
+  const total = subtotal + igv;
+  document.getElementById('subtotal').textContent = formatPrice(subtotal);
+  document.getElementById('igv').textContent = formatPrice(igv);
+  document.getElementById('total-final').textContent = formatPrice(total);
+});
+</script>
+</body>
+</html>

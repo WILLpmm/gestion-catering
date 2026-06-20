@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css">
+<title>Personal de Servicio | Elite Catering</title>
+<style>
+header{ display:flex; justify-content:space-between; align-items:center; padding:15px 25px; background:#1f1f1f; border-bottom:4px solid #d99000; }
+header strong{ color:#ffb300; font-size:1.4rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>👔 Personal de Servicio</strong>
+  <div>
+    <span id="welcome" style="color:#ddd;margin-right:15px;"></span>
+    <a href="#" onclick="logout();return false;" class="btn-small" style="background:#dc3545;">Cerrar sesión</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="panel">
+    <h2>Mis Eventos Asignados</h2>
+    <p class="note">Aquí puedes consultar los eventos en los que has sido asignado para atender, junto con el horario y lugar.</p>
+  </div>
+
+  <div id="eventos-container">
+    <p class="note">Cargando tus asignaciones...</p>
+  </div>
+
+</main>
+
+<script>
+
+function checkLogin(){
+  fetch('/api/session').then(r=>r.json()).then(s=>{
+    if(!s.loggedIn){ location='login.html'; return; }
+    if(s.role!=='personal' && s.role!=='admin'){ location='index.html'; return; }
+    document.getElementById('welcome').textContent = '👤 ' + s.username;
+    loadEventos();
+  }).catch(()=>{ location='login.html'; });
+}
+
+function logout(){
+  fetch('/api/logout',{method:'POST'}).finally(()=>{ location='login.html'; });
+}
+
+function estadoLabel(status){
+  const map = {
+    aceptado:'Confirmado — En preparación', en_preparacion:'En preparación en cocina',
+    listo_despacho:'Listo para despacho', en_ruta:'En camino al evento',
+    entregado:'Entregado en el evento', cerrado:'Evento finalizado'
+  };
+  return map[status] || status;
+}
+
+function loadEventos(){
+  fetch('/api/orders/asignados').then(r=>r.json()).then(data=>{
+    const container = document.getElementById('eventos-container');
+    container.innerHTML = '';
+    if(!data.ok || data.orders.length === 0){
+      container.innerHTML = '<div class="panel"><p class="note">Aún no tienes eventos asignados. Cuando Ventas o Administración te asignen un evento, aparecerá aquí.</p></div>';
+      return;
+    }
+
+    data.orders.forEach(order=>{
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.evento}
+            <div class="order-meta">📅 Fecha: ${order.clientInfo.fecha} ${order.transporte.horarioSalida ? '· 🕒 Salida: ' + order.transporte.horarioSalida : ''}</div>
+            <div class="order-meta">📍 Lugar: ${order.clientInfo.lugar || 'Por confirmar'}</div>
+            <div class="order-meta">👥 Cliente: ${order.clientInfo.cliente} · ${order.clientInfo.persons} invitados</div>
+          </div>
+          <span class="badge badge-${order.status}">${estadoLabel(order.status)}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', checkLogin);
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Clientes</title>
+</head>
+<body>
+  <header><strong>👥 Gestión de Clientes</strong><span>Registrar nuevos clientes</span></header>
+  <main class="wrap">
+    <div class="panel">
+      <h1>Gestión de Clientes</h1>
+      <input type="text" id="cliente-nombre" placeholder="Nombre">
+      <input type="text" id="cliente-telefono" placeholder="Teléfono">
+      <button class="btn" onclick="registrarCliente();return false;">Registrar</button>
+      <div class="footer-buttons">
+        <a href="menu.html" class="btn-small">Volver</a>
+        <a href="index.html" class="btn-small">Inicio</a>
+      </div>
+    </div>
+  </main>
+  <script>
+    function checkLogin() {
+      fetch('/api/session').then(r => r.json()).then(s => {
+        if (!s.loggedIn) {
+          location = 'index.html';
+          return;
+        }
+        if (s.role !== 'admin') {
+          location = 'index.html';
+        }
+      }).catch(() => {
+        location = 'index.html';
+      });
+    }
+
+    function registrarCliente() {
+      const nombre = document.getElementById('cliente-nombre').value.trim();
+      const telefono = document.getElementById('cliente-telefono').value.trim();
+      if (!nombre || !telefono) {
+        alert('Por favor completa el nombre y teléfono del cliente.');
+        return;
+      }
+      alert('Cliente registrado: ' + nombre + '\nTeléfono: ' + telefono);
+      document.getElementById('cliente-nombre').value = '';
+      document.getElementById('cliente-telefono').value = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', checkLogin);
+  </script>
+</body>
+</html>

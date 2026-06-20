@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Panel Administrativo</title>
+</head>
+<body>
+  <header><strong>⚙️ Panel Administrativo</strong><span>Dashboard de control</span></header>
+  <main class="wrap">
+    <div class="panel">
+      <h1>Estadísticas</h1>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3 id="total-users">0</h3>
+          <p>Usuarios Registrados</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="total-orders">0</h3>
+          <p>Pedidos Pendientes</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="total-delivered">0</h3>
+          <p>Entregas Completadas</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="total-in-transit">0</h3>
+          <p>En Tránsito</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Usuarios Registrados</h2>
+      <table id="users-table" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #ddd;padding:10px;">Usuario</th>
+            <th style="border:1px solid #ddd;padding:10px;">Rol</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Pedidos Pendientes</h2>
+      <table id="orders-table" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #ddd;padding:10px;">Código</th>
+            <th style="border:1px solid #ddd;padding:10px;">Cliente</th>
+            <th style="border:1px solid #ddd;padding:10px;">Total</th>
+            <th style="border:1px solid #ddd;padding:10px;">Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="footer-buttons">
+      <a href="menu.html" class="btn-small">Volver al menú</a>
+      <a href="#" class="btn-small" onclick="logout(); return false;">Cerrar sesión</a>
+    </div>
+  </main>
+
+  <script>
+    function checkLogin() {
+      fetch('/api/session').then(r => r.json()).then(s => {
+        if (!s.loggedIn) {
+          location = 'index.html';
+          return;
+        }
+        if (s.role !== 'admin') {
+          location = 'index.html';
+        }
+      }).catch(() => {
+        location = 'index.html';
+      });
+    }
+
+    function logout() {
+      fetch('/api/logout', { method: 'POST' }).finally(()=> location = 'index.html');
+    }
+
+    function formatPrice(value) {
+      return 'S/' + Number(value).toLocaleString('es-PE');
+    }
+
+    function loadDashboard() {
+      fetch('/api/users').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        document.getElementById('total-users').textContent = data.users.length;
+        const tbody = document.querySelector('#users-table tbody');
+        tbody.innerHTML = '';
+        data.users.forEach(user => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td style="border:1px solid #ddd;padding:10px;">${user.username}</td>
+            <td style="border:1px solid #ddd;padding:10px;">${user.role}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }).catch(err => console.error(err));
+
+      fetch('/api/orders').then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const pending = data.orders.filter(o => o.status === 'pendiente').length;
+        const delivered = data.orders.filter(o => o.status === 'entregado').length;
+        const inTransit = data.orders.filter(o => o.status === 'en ruta').length;
+        document.getElementById('total-orders').textContent = pending;
+        document.getElementById('total-delivered').textContent = delivered;
+        document.getElementById('total-in-transit').textContent = inTransit;
+
+        const tbody = document.querySelector('#orders-table tbody');
+        tbody.innerHTML = '';
+        data.orders.filter(o => o.status === 'pendiente').forEach(order => {
+          const total = order.cart.reduce((sum, item) => sum + Number(item.price) * Number(item.qty || 1), 0);
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td style="border:1px solid #ddd;padding:10px;">${order.id}</td>
+            <td style="border:1px solid #ddd;padding:10px;">${order.clientInfo.cliente}</td>
+            <td style="border:1px solid #ddd;padding:10px;">${formatPrice(total)}</td>
+            <td style="border:1px solid #ddd;padding:10px;">${order.status}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }).catch(err => console.error(err));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      checkLogin();
+      loadDashboard();
+    });
+  </script>
+</body>
+</html>

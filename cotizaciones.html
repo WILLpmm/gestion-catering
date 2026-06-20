@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Cotizaciones</title>
+</head>
+<body>
+  <header><strong>📄 Cotizaciones</strong><span>Lista de cotizaciones</span></header>
+  <main class="wrap">
+    <div class="panel">
+      <h1>Gestión de Cotizaciones</h1>
+      <table border="1" style="width:100%;border-collapse:collapse;margin-top:16px;">
+        <tr>
+          <th>Código</th>
+          <th>Cliente</th>
+          <th>Total</th>
+        </tr>
+        <tr>
+          <td>C001</td>
+          <td>Juan Pérez</td>
+          <td>S/.4500</td>
+        </tr>
+      </table>
+      <div class="footer-buttons">
+        <a href="menu.html" class="btn-small">Volver al menú</a>
+        <a href="index.html" class="btn-small">Inicio</a>
+      </div>
+    </div>
+  </main>
+  <script>
+    function checkLogin() {
+      fetch('/api/session').then(r => r.json()).then(s => {
+        if (!s.loggedIn) {
+          location = 'index.html';
+          return;
+        }
+        if (s.role !== 'admin') {
+          location = 'index.html';
+        }
+      }).catch(() => {
+        location = 'index.html';
+      });
+    }
+    document.addEventListener('DOMContentLoaded', checkLogin);
+  </script>
+</body>
+</html>

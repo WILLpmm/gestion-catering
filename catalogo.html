@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Elite Catering — Catálogo</title>
+
+  <style>
+    .price-tag{
+      font-size:1.3rem;
+      color:#28a745;
+      font-weight:bold;
+      margin:10px 0;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<header>
+  <div>
+    <strong>🍽️ Elite Catering</strong>
+    <span>— Precios y Cotizaciones</span>
+  </div>
+
+  <nav class="nav-container">
+    <a href="index.html" class="nav-link">Inicio</a>
+    <a href="catalogo.html" class="nav-link" style="color:#ffb300;">Catálogo</a>
+    <a href="carrito.html" class="nav-link">🛒 Carrito</a>
+    <a href="seguimiento.html" class="nav-link">📦 Mis Pedidos</a>
+  </nav>
+</header>
+
+<main class="catalogo-servicios">
+
+  <h2 class="titulo-servicios">
+    Elige los servicios para tu evento
+  </h2>
+
+  <div class="services">
+
+```
+<!-- 1 -->
+<div class="service-card">
+  <img src="imagenes/buffet.jpg" class="service-img" alt="Buffet Premium">
+
+  <h3>Buffet Premium</h3>
+
+  <p>
+    Ideal para bodas, aniversarios y eventos corporativos.
+    Incluye entradas, platos de fondo, postres,
+    bebidas y personal de atención.
+  </p>
+
+  <div class="price-tag">S/ 1,500</div>
+
+  <button onclick="agregarAlCarrito('Buffet Premium',1500)">
+    Añadir al Carrito
+  </button>
+</div>
+
+<!-- 2 -->
+<div class="service-card">
+  <img src="imagenes/escolar.jpg" class="service-img" alt="Asamblea Escolar">
+
+  <h3>Asamblea Escolar</h3>
+
+  <p>
+    Servicio diseñado para colegios e instituciones.
+    Incluye bocadillos, refrescos, café y atención.
+  </p>
+
+  <div class="price-tag">S/ 500</div>
+
+  <button onclick="agregarAlCarrito('Asamblea Escolar',500)">
+    Añadir al Carrito
+  </button>
+</div>
+
+<!-- 3 -->
+<div class="service-card">
+  <img src="imagenes/ejecutivo.jpg" class="service-img" alt="Almuerzo Ejecutivo">
+
+  <h3>Almuerzo Ejecutivo</h3>
+
+  <p>
+    Perfecto para reuniones empresariales.
+    Incluye entrada, plato principal, bebida y postre.
+  </p>
+
+  <div class="price-tag">S/ 900</div>
+
+  <button onclick="agregarAlCarrito('Almuerzo Ejecutivo',900)">
+    Añadir al Carrito
+  </button>
+</div>
+
+<!-- 4 -->
+<div class="service-card">
+  <img src="imagenes/cumpleaños.jpg" class="service-img" alt="Cumpleaños">
+
+  <h3>Catering para Cumpleaños</h3>
+
+  <p>
+    Torta, bocaditos, bebidas, decoración básica
+    y atención para celebraciones familiares.
+  </p>
+
+  <div class="price-tag">S/ 750</div>
+
+  <button onclick="agregarAlCarrito('Catering Cumpleaños',750)">
+    Añadir al Carrito
+  </button>
+</div>
+
+<!-- 5 -->
+<div class="service-card">
+  <img src="imagenes/boda.jpg" class="service-img" alt="Bodas Premium">
+
+  <h3>Bodas Premium</h3>
+
+  <p>
+    Buffet completo, mozos, decoración,
+    barra de bebidas y servicio exclusivo.
+  </p>
+
+  <div class="price-tag">S/ 2,500</div>
+
+  <button onclick="agregarAlCarrito('Bodas Premium',2500)">
+    Añadir al Carrito
+  </button>
+</div>
+
+<!-- 6 -->
+<div class="service-card">
+  <img src="imagenes/coffeebreak.jpg" class="service-img" alt="Coffee Break">
+
+  <h3>Coffee Break Empresarial</h3>
+
+  <p>
+    Café, infusiones, jugos, sándwiches,
+    galletas y postres para reuniones.
+  </p>
+
+  <div class="price-tag">S/ 650</div>
+
+  <button onclick="agregarAlCarrito('Coffee Break Empresarial',650)">
+    Añadir al Carrito
+  </button>
+</div>
+
+<!-- 7 -->
+<div class="service-card">
+  <img src="imagenes/graduacion.jpg" class="service-img" alt="Graduaciones">
+
+  <h3>Graduaciones y Promociones</h3>
+
+  <p>
+    Menú especial para ceremonias,
+    promociones escolares y graduaciones.
+  </p>
+
+  <div class="price-tag">S/ 1,200</div>
+
+  <button onclick="agregarAlCarrito('Graduaciones y Promociones',1200)">
+    Añadir al Carrito
+  </button>
+</div>
+```
+
+  </div>
+
+</main>
+
+<footer class="footer">
+
+  <div class="footer-content">
+
+```
+<div class="footer-section">
+  <h3>🍽️ Elite Catering</h3>
+  <p>
+    Especialistas en catering para eventos
+    corporativos, bodas, cumpleaños y celebraciones.
+  </p>
+</div>
+
+<div class="footer-section">
+  <h3>Contacto</h3>
+  <p>📞 +51 963 756 182</p>
+  <p>✉ contacto@elitecatering.com</p>
+  <p>📍 Lima, Perú</p>
+</div>
+
+<div class="footer-section">
+  <h3>Horario</h3>
+  <p>Lunes a Viernes</p>
+  <p>08:00 AM - 06:00 PM</p>
+  <p>Sábados: 08:00 AM - 01:00 PM</p>
+</div>
+```
+
+  </div>
+
+  <div class="footer-bottom">
+    © 2026 Elite Catering Premium | Todos los derechos reservados
+  </div>
+
+</footer>
+
+<script>
+
+let servicioPendiente = null;
+let precioPendiente = null;
+
+function agregarAlCarrito(nombre, precio) {
+
+  let clientInfo = JSON.parse(
+    sessionStorage.getItem('clientInfo') || 'null'
+  );
+
+  if(!clientInfo){
+
+    servicioPendiente = nombre;
+    precioPendiente = precio;
+
+    document.getElementById('modalCliente').style.display = 'flex';
+    return;
+  }
+
+  agregarServicio(nombre, precio);
+}
+
+function agregarServicio(nombre, precio){
+
+  let cart = JSON.parse(
+    sessionStorage.getItem('cart') || '[]'
+  );
+
+  let itemExistente = cart.find(
+    it => it.item === nombre
+  );
+
+  if(itemExistente){
+    itemExistente.qty += 1;
+  }else{
+    cart.push({
+      item:nombre,
+      price:precio,
+      qty:1
+    });
+  }
+
+  sessionStorage.setItem(
+    'cart',
+    JSON.stringify(cart)
+  );
+
+  alert('✅ ' + nombre + ' agregado al carrito');
+}
+
+function guardarDatosCliente(){
+
+  const cliente =
+    document.getElementById('clienteNombre').value;
+
+  const fecha =
+    document.getElementById('clienteFecha').value;
+
+  const evento =
+    document.getElementById('clienteEvento').value;
+
+  const personas =
+    document.getElementById('clientePersonas').value;
+
+  if(
+    !cliente ||
+    !fecha ||
+    !evento ||
+    !personas
+  ){
+    alert('Completa todos los campos');
+    return;
+  }
+
+  const clientInfo = {
+    cliente,
+    fecha,
+    evento,
+    persons:personas
+  };
+
+  sessionStorage.setItem(
+    'clientInfo',
+    JSON.stringify(clientInfo)
+  );
+
+  document.getElementById('modalCliente').style.display='none';
+
+  agregarServicio(
+    servicioPendiente,
+    precioPendiente
+  );
+}
+
+function cerrarModal(){
+  document.getElementById('modalCliente').style.display='none';
+}
+
+function verificarFecha(){
+  const fecha = document.getElementById('clienteFecha').value;
+  const warning = document.getElementById('fecha-warning');
+  if(!fecha){ warning.style.display='none'; return; }
+
+  fetch('/api/capacidad/' + fecha).then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const o = data.ocupacion;
+    const excede = o.excedeEventos || o.excedeVajilla || o.excedePersonal;
+    warning.style.display = 'block';
+    if(excede){
+      warning.style.background = '#fde2e2';
+      warning.style.color = '#9b1c1c';
+      warning.textContent = '⚠️ Esta fecha ya tiene alta demanda (' + o.eventos + ' eventos programados). Es posible que tu solicitud no pueda ser aceptada; te recomendamos elegir otra fecha o consultar con Ventas.';
+    } else {
+      warning.style.background = '#e8fff0';
+      warning.style.color = '#1f7a45';
+      warning.textContent = '✅ Fecha disponible (' + o.eventos + '/' + o.limites.maxEventosPorDia + ' eventos programados).';
+    }
+  }).catch(()=>{ warning.style.display='none'; });
+}
+
+</script>
+<div id="modalCliente"
+style="
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.6);
+justify-content:center;
+align-items:center;
+z-index:9999;
+">
+
+<div style="
+background:white;
+padding:25px;
+border-radius:10px;
+width:400px;
+max-width:90%;
+">
+
+<h2>Datos del Evento</h2>
+
+<input
+id="clienteNombre"
+placeholder="Nombre del cliente"
+style="width:100%;padding:10px;margin:8px 0;">
+
+<input
+id="clienteFecha"
+type="date"
+style="width:100%;padding:10px;margin:8px 0;"
+onchange="verificarFecha()">
+
+<div id="fecha-warning" style="display:none;font-size:.85rem;padding:8px 10px;border-radius:8px;margin-bottom:6px;"></div>
+
+<select
+id="clienteEvento"
+style="width:100%;padding:10px;margin:8px 0;">
+
+<option value="">Seleccione evento</option>
+<option value="Boda">Boda</option>
+<option value="Cumpleaños">Cumpleaños</option>
+<option value="Corporativo">Corporativo</option>
+
+</select>
+
+<input
+id="clientePersonas"
+type="number"
+placeholder="Cantidad de personas"
+style="width:100%;padding:10px;margin:8px 0;">
+
+<div style="margin-top:15px;text-align:right;">
+
+<button
+onclick="cerrarModal()"
+style="padding:10px 15px;">
+Cancelar
+</button>
+
+<button
+onclick="guardarDatosCliente()"
+style="
+padding:10px 15px;
+background:#28a745;
+color:white;
+border:none;
+margin-left:10px;">
+Guardar
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+</body>
+</html>

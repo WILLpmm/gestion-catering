@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css">
+<title>Cocina | Elite Catering</title>
+<style>
+header{ display:flex; justify-content:space-between; align-items:center; padding:15px 25px; background:#1f1f1f; border-bottom:4px solid #d99000; }
+header strong{ color:#ffb300; font-size:1.4rem; }
+.tabs{ display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+.tab-btn{ width:auto; min-width:auto; padding:10px 18px; background:#444; }
+.tab-btn.active{ background:#d99000; }
+.tab-view{ display:none; }
+.tab-view.active{ display:block; }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>🍳 Área de Cocina / Producción</strong>
+  <div>
+    <a href="menu.html" class="btn-small">Menú</a>
+    <a href="#" onclick="logout();return false;" class="btn-small" style="background:#dc3545;">Cerrar sesión</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="panel">
+    <h2>Panel de Cocina</h2>
+    <p class="note">Pedidos confirmados por Logística, listas de insumos calculadas automáticamente y control de estado de producción.</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="btn-tab-pedidos" onclick="switchTab('pedidos')">📋 Pedidos en Producción</button>
+    <button class="tab-btn" id="btn-tab-insumos" onclick="switchTab('insumos')">🧾 Insumos por Fecha</button>
+  </div>
+
+  <div id="tab-pedidos" class="tab-view active">
+    <div class="panel">
+      <h3>Pedidos Aceptados / En Preparación</h3>
+      <div id="orders-container">
+        <p class="note">Cargando pedidos...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-insumos" class="tab-view">
+    <div class="panel">
+      <h3>Lista de Insumos Consolidada</h3>
+      <p class="note">Selecciona una fecha para ver el total de ingredientes necesarios sumando todos los pedidos confirmados de ese día.</p>
+      <input type="date" id="fecha-insumos" onchange="cargarInsumos()" style="max-width:250px;">
+      <div id="insumos-result"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+
+function checkLogin(){
+  fetch('/api/session').then(r=>r.json()).then(s=>{
+    if(!s.loggedIn){ location='login.html'; return; }
+    if(s.role!=='cocina' && s.role!=='admin'){ location='index.html'; }
+  }).catch(()=>{ location='login.html'; });
+}
+
+function logout(){
+  fetch('/api/logout',{method:'POST'}).finally(()=>{ location='login.html'; });
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('btn-tab-'+tab).classList.add('active');
+}
+
+function estadoLabel(status){
+  const map = {
+    aceptado:'Aceptado — Pendiente de iniciar',
+    en_preparacion:'En Preparación',
+    listo_despacho:'Listo para Despacho'
+  };
+  return map[status] || status;
+}
+
+function loadOrders(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const relevantes = data.orders.filter(o => ['aceptado','en_preparacion','listo_despacho'].includes(o.status));
+    const container = document.getElementById('orders-container');
+    container.innerHTML = '';
+
+    if(relevantes.length === 0){
+      container.innerHTML = '<p class="note">No hay pedidos en producción por el momento.</p>';
+      return;
+    }
+
+    relevantes.forEach(order=>{
+      const card = document.createElement('div');
+      card.className = 'order-card';
+
+      const ingredientesHTML = order.requerimientos.ingredientes.map(ing =>
+        `<li><span>${ing.nombre}</span><strong>${ing.cantidad}</strong></li>`
+      ).join('');
+
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">📅 ${order.clientInfo.fecha} · 🎉 ${order.clientInfo.evento} · 👥 ${order.clientInfo.persons} personas</div>
+          </div>
+          <span class="badge badge-${order.status}">${estadoLabel(order.status)}</span>
+        </div>
+
+        <h4 style="margin:10px 0 5px;color:#d99000;">Ingredientes necesarios (calculado automáticamente)</h4>
+        <ul class="ingredient-list">${ingredientesHTML}</ul>
+
+        <h4 style="margin:15px 0 5px;color:#d99000;">Estado de producción</h4>
+        <div class="checklist-item ${order.produccion.insumosRecibidos?'done':''}">
+          ${order.produccion.insumosRecibidos ? '✅' : '⬜'} Insumos recibidos
+          ${!order.produccion.insumosRecibidos ? `<button onclick="actualizar('${order.id}','insumosRecibidos')" style="margin-left:auto;width:auto;min-width:auto;padding:6px 12px;font-size:.85rem;">Marcar</button>` : ''}
+        </div>
+        <div class="checklist-item ${order.produccion.enPreparacion?'done':''}">
+          ${order.produccion.enPreparacion ? '✅' : '⬜'} En preparación
+          ${!order.produccion.enPreparacion && order.produccion.insumosRecibidos ? `<button onclick="actualizar('${order.id}','enPreparacion')" style="margin-left:auto;width:auto;min-width:auto;padding:6px 12px;font-size:.85rem;">Marcar</button>` : ''}
+        </div>
+        <div class="checklist-item ${order.produccion.controlCalidad?'done':''}">
+          ${order.produccion.controlCalidad ? '✅' : '⬜'} Control de calidad realizado
+          ${!order.produccion.controlCalidad && order.produccion.enPreparacion ? `<button onclick="actualizar('${order.id}','controlCalidad')" style="margin-left:auto;width:auto;min-width:auto;padding:6px 12px;font-size:.85rem;">Marcar</button>` : ''}
+        </div>
+        <div class="checklist-item ${order.produccion.listoDespacho?'done':''}">
+          ${order.produccion.listoDespacho ? '✅' : '⬜'} Listo para despacho
+          ${!order.produccion.listoDespacho && order.produccion.controlCalidad ? `<button onclick="actualizar('${order.id}','listoDespacho')" style="margin-left:auto;width:auto;min-width:auto;padding:6px 12px;font-size:.85rem;background:#28a745;">Marcar listo ✔</button>` : ''}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function actualizar(orderId, campo){
+  fetch(`/api/orders/${orderId}/produccion`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({campo})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error || 'No se pudo actualizar'); return; }
+    loadOrders();
+  });
+}
+
+function cargarInsumos(){
+  const fecha = document.getElementById('fecha-insumos').value;
+  if(!fecha) return;
+  fetch('/api/produccion/ingredientes/' + fecha).then(r=>r.json()).then(data=>{
+    const result = document.getElementById('insumos-result');
+    if(!data.ok){ result.innerHTML = '<p class="note">No se pudo cargar.</p>'; return; }
+    if(data.ingredientes.length === 0){
+      result.innerHTML = '<p class="note">No hay pedidos confirmados para esta fecha.</p>';
+      return;
+    }
+    result.innerHTML = `
+      <p class="note" style="margin-top:15px;">Pedidos incluidos: ${data.pedidos.join(', ')}</p>
+      <ul class="ingredient-list">
+        ${data.ingredientes.map(i => `<li><span>${i.nombre}</span><strong>${i.cantidad}</strong></li>`).join('')}
+      </ul>
+    `;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  checkLogin();
+  loadOrders();
+  setInterval(loadOrders, 10000);
+  document.getElementById('fecha-insumos').valueAsDate = new Date();
+  cargarInsumos();
+});
+
+</script>
+
+</body>
+</html>

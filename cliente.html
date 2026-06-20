@@ -1,32 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Elite Catering — Área de Clientes</title>
+  <style>
+    /* Ajustes para unificar el encabezado con las pestañas de navegación */
+    header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
+    .nav-container { display: flex; align-items: center; gap: 15px; }
+    .nav-link { text-decoration: none; font-weight: 600; color: #ddd; transition: color 0.2s; }
+    .nav-link:hover { color: #ffb300; }
+    .active-link { color: #ffb300; }
+  </style>
+</head>
+<body>
 
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="estilos.css"><title>Cliente</title></head>
-<body><header><strong>👤 Cliente</strong><a href="menu.html" class="btn">Menú</a></header>
-<div class="wrap">
-<div class="panel">
-<h2>Datos del evento</h2>
-<input placeholder="Nombre del cliente">
-<input type="date">
-<select><option>Boda</option><option>Cumpleaños</option><option>Corporativo</option></select>
-<input type="number" placeholder="Cantidad de personas">
-</div>
-<h2>Menús disponibles</h2>
-<div class="cards">
-<div class="menu-card"><h3>Buffet Premium</h3><p>Ideal para eventos grandes.</p><p><b>S/1500</b></p><a class="btn" href="carrito.html?item=Buffet%20Premium&price=1500">Agregar al carrito</a></div>
-<div class="menu-card"><h3>Asamblea escolar</h3><p>Bebidas y bocadillos.</p><p><b>S/500</b></p><a class="btn" href="carrito.html?item=Asamblea%20escolar&price=500">Agregar al carrito</a></div>
-<div class="menu-card"><h3>Almuerzo Ejecutivo</h3><p>Menú corporativo.</p><p><b>S/900</b></p><a class="btn" href="carrito.html?item=Almuerzo%20Ejecutivo&price=900">Agregar al carrito</a></div>
-</div></div>
-<script>
-function checkLogin() {
-  if (sessionStorage.getItem('loggedIn') !== 'true') {
-    location = 'index.html';
-    return;
-  }
-  const role = sessionStorage.getItem('role');
-  if (role !== 'cliente' && role !== 'admin') {
-    location = 'index.html';
-  }
-}
-document.addEventListener('DOMContentLoaded', checkLogin);
-</script>
-</body></html>
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR UNIFICADA -->
+  <header>
+    <div>
+      <strong>📋 Datos del Evento</strong>
+      <span id="welcome-message" style="margin-left: 10px;">— Bienvenido</span>
+    </div>
+    <nav class="nav-container">
+      <a href="index.html" class="nav-link">Inicio</a>
+      <a href="catalogo.html" class="nav-link">Catálogo</a>
+      <a href="carrito.html" class="nav-link">🛒 Carrito</a>
+      <a href="seguimiento.html" class="nav-link">📦 Mis Pedidos</a>
+      <a href="#" class="nav-link" onclick="logout(); return false;" style="color: #ff5252; margin-left: 10px;">Cerrar sesión</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <!-- Formulario principal de datos del evento -->
+    <div class="panel">
+      <h2>Datos del evento</h2>
+      <input id="cliente-name" placeholder="Nombre del cliente">
+      <input id="evento-date" type="date">
+      <select id="evento-type">
+        <option value="">Selecciona tipo de evento</option>
+        <option value="Boda">Boda</option>
+        <option value="Cumpleaños">Cumpleaños</option>
+        <option value="Corporativo">Corporativo</option>
+      </select>
+      <input id="cantidad-personas" type="number" placeholder="Cantidad de personas" min="1" value="1">
+      
+      <!-- BOTÓN PRINCIPAL PARA SEGUIR EL FLUJO AL CARRITO -->
+      <button class="btn" onclick="guardarDatosYIrAlCarrito()" style="margin-top: 20px;">Continuar al Carrito 🛒</button>
+    </div>
+
+    <!-- Menús informativos (Los botones se quitaron porque ya los agregaste en el catálogo) -->
+    <h2>Menús seleccionados para tu revisión</h2>
+    <div class="cards">
+      <div class="menu-card">
+        <h3>Buffet Premium</h3>
+        <p>Ideal para eventos grandes.</p>
+        <p><b>S/1500</b></p>
+      </div>
+      <div class="menu-card">
+        <h3>Asamblea escolar</h3>
+        <p>Bebidas y bocadillos.</p>
+        <p><b>S/500</b></p>
+      </div>
+      <div class="menu-card">
+        <h3>Almuerzo Ejecutivo</h3>
+        <p>Menú corporativo.</p>
+        <p><b>S/900</b></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function logout() {
+      fetch('/api/logout', { method: 'POST' }).finally(() => location = 'login.html');
+    }
+
+    function checkLogin() {
+      fetch('/api/session')
+        .then(r => r.json())
+        .then(s => {
+          if (!s.loggedIn) { 
+            location = 'login.html'; 
+            return; 
+          }
+          if (s.role !== 'cliente' && s.role !== 'admin') { 
+            location = 'index.html'; 
+            return;
+          }
+          // Saludo e inserción del nombre del cliente logueado
+          document.getElementById('welcome-message').textContent = '— Hola, ' + s.username;
+          document.getElementById('cliente-name').value = s.username;
+        })
+        .catch(() => { 
+          location = 'login.html'; 
+        });
+    }
+
+    // Recoge la información de los inputs y redirige al carrito
+    function guardarDatosYIrAlCarrito() {
+      const cliente = document.getElementById('cliente-name').value.trim();
+      const fecha = document.getElementById('evento-date').value;
+      const evento = document.getElementById('evento-type').value;
+      const persons = Number(document.getElementById('cantidad-personas').value || 1);
+      
+      if (!cliente || !fecha || !evento || !persons) {
+        alert('Por favor completa Nombre, Fecha, Tipo de evento y Cantidad de personas antes de continuar.');
+        return;
+      }
+
+      // Guardamos la información del evento de forma persistente
+      const clientInfo = { cliente, evento, fecha, persons };
+      sessionStorage.setItem('clientInfo', JSON.stringify(clientInfo));
+       alert('✅ Datos guardados correctamente');
+
+      // PASO SIGUIENTE EXCLUSIVO: Envía al usuario al carrito
+      location = 'catalogo.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', checkLogin);
+  </script>
+</body>
+</html>
+

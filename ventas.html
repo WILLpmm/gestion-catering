@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css">
+<title>Ventas | Elite Catering</title>
+<style>
+header{ display:flex; justify-content:space-between; align-items:center; padding:15px 25px; background:#1f1f1f; border-bottom:4px solid #d99000; }
+header strong{ color:#ffb300; font-size:1.4rem; }
+.tabs{ display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+.tab-btn{ width:auto; min-width:auto; padding:10px 18px; background:#444; }
+.tab-btn.active{ background:#d99000; }
+.tab-view{ display:none; }
+.tab-view.active{ display:block; }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>💼 Ejecutivo de Ventas / Atención al Cliente</strong>
+  <div>
+    <a href="menu.html" class="btn-small">Menú</a>
+    <a href="#" onclick="logout();return false;" class="btn-small" style="background:#dc3545;">Cerrar sesión</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="panel">
+  <h2>Panel de Ventas</h2>
+  <p class="note">Atiende solicitudes de cotización, coordina los detalles del evento, gestiona cambios/cancelaciones y coordina con proveedores externos.</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="btn-tab-cotizaciones" onclick="switchTab('cotizaciones')">📄 Solicitudes Nuevas</button>
+  <button class="tab-btn" id="btn-tab-leads" onclick="switchTab('leads')">💬 Leads de Cotización</button>
+  <button class="tab-btn" id="btn-tab-coordinacion" onclick="switchTab('coordinacion')">🎯 Coordinación / Personal</button>
+  <button class="tab-btn" id="btn-tab-cambios" onclick="switchTab('cambios')">🔄 Cambios y Cancelaciones</button>
+  <button class="tab-btn" id="btn-tab-proveedores" onclick="switchTab('proveedores')">🤝 Proveedores</button>
+  <button class="tab-btn" id="btn-tab-catalogo" onclick="switchTab('catalogo')">🍽️ Catálogo (Asesoría)</button>
+</div>
+
+<!-- TAB 1: SOLICITUDES NUEVAS (pendiente -> confirmado) -->
+<div id="tab-cotizaciones" class="tab-view active">
+  <div class="panel">
+    <h3>Solicitudes de cotización recibidas</h3>
+    <p class="note">Revisa, coordina el lugar/requerimientos especiales y confirma el pedido para que el cliente pueda pagar el adelanto.</p>
+    <div id="cotizaciones-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- TAB 2: LEADS DE COTIZACIÓN (no comprometidos a pedido) -->
+<div id="tab-leads" class="tab-view">
+  <div class="panel">
+    <h3>Personas que solicitaron un estimado desde "Cotizar"</h3>
+    <p class="note">Estas son consultas de precio, aún no son pedidos formales. Contáctalas para asesorarlas y convertirlas en una venta.</p>
+    <div id="leads-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- TAB 3: COORDINACIÓN DE DETALLES / PERSONAL -->
+<div id="tab-coordinacion" class="tab-view">
+  <div class="panel">
+    <h3>Pedidos confirmados — Asignación de personal de servicio</h3>
+    <div id="coordinacion-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- TAB 3: CAMBIOS Y CANCELACIONES -->
+<div id="tab-cambios" class="tab-view">
+  <div class="panel">
+    <h3>Solicitudes de cambio o cancelación</h3>
+    <div class="alert-box alert-info">📌 Regla de negocio: no se permiten cambios ni cancelaciones con menos de 1 semana de anticipación, ya que Cocina puede haber comprado los insumos.</div>
+    <div id="cambios-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- TAB 4: PROVEEDORES -->
+<div id="tab-proveedores" class="tab-view">
+  <div class="panel">
+    <h3>Proveedores externos registrados</h3>
+    <table id="proveedores-table">
+      <thead><tr><th>Nombre</th><th>Servicio</th><th>Costo</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h4 style="margin-top:20px;color:#d99000;">Registrar nuevo proveedor</h4>
+    <div class="form-grid">
+      <input id="prov-nombre" placeholder="Nombre del proveedor">
+      <input id="prov-servicio" placeholder="Servicio que ofrece">
+      <input id="prov-costo" type="number" placeholder="Costo (S/)">
+    </div>
+    <button class="btn" style="margin-top:12px;" onclick="agregarProveedor()">Registrar proveedor</button>
+  </div>
+</div>
+
+<!-- TAB 5: CATÁLOGO PARA ASESORÍA -->
+<div id="tab-catalogo" class="tab-view">
+  <div class="panel">
+    <h3>Catálogo de servicios (para asesorar al cliente por teléfono)</h3>
+    <table id="catalogo-table">
+      <thead><tr><th>Servicio</th><th>Precio</th><th>Personal req.</th><th>Vajilla / persona</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+<script>
+
+function checkLogin(){
+  fetch('/api/session').then(r=>r.json()).then(s=>{
+    if(!s.loggedIn){ location='login.html'; return; }
+    if(s.role!=='ventas' && s.role!=='admin'){ location='index.html'; }
+  }).catch(()=>{ location='login.html'; });
+}
+
+function logout(){
+  fetch('/api/logout',{method:'POST'}).finally(()=>{ location='login.html'; });
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('btn-tab-'+tab).classList.add('active');
+}
+
+function formatPrice(value){ return 'S/' + Number(value).toLocaleString('es-PE'); }
+function calcularTotal(order){ return order.cart.reduce((s,it)=> s + Number(it.price)*Number(it.qty||1), 0) * 1.18; }
+
+/* ---------- TAB 1: SOLICITUDES NUEVAS ---------- */
+function loadCotizaciones(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const pendientes = data.orders.filter(o => o.status === 'pendiente');
+    const container = document.getElementById('cotizaciones-container');
+    container.innerHTML = '';
+
+    if(pendientes.length === 0){
+      container.innerHTML = '<p class="note">No hay solicitudes nuevas por revisar.</p>';
+      return;
+    }
+
+    pendientes.forEach(order=>{
+      const total = calcularTotal(order);
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">📅 ${order.clientInfo.fecha} · 🎉 ${order.clientInfo.evento} · 👥 ${order.clientInfo.persons} personas</div>
+            <div class="order-meta">💰 Total estimado: ${formatPrice(total)}</div>
+          </div>
+          <span class="badge badge-pendiente">Pendiente de revisión</span>
+        </div>
+        <ul style="margin:10px 0 14px 18px;color:#555;">
+          ${order.cart.map(it => `<li>${it.item} × ${it.qty || 1}</li>`).join('')}
+        </ul>
+        <div class="form-grid">
+          <input placeholder="Lugar del evento" id="lugar-${order.id}">
+          <input placeholder="Requerimientos especiales (opcional)" id="req-${order.id}">
+          <input type="number" placeholder="Monto de adelanto (S/, por defecto 30%)" id="adelanto-${order.id}">
+        </div>
+        <div class="order-actions">
+          <button onclick="confirmarVentas('${order.id}')" style="background:#28a745;">✔ Confirmar y coordinar pedido</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function confirmarVentas(orderId){
+  const lugar = document.getElementById('lugar-'+orderId).value;
+  const requerimientosEspeciales = document.getElementById('req-'+orderId).value;
+  const montoAdelanto = document.getElementById('adelanto-'+orderId).value;
+  fetch(`/api/orders/${orderId}/confirmar-ventas`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({lugar, requerimientosEspeciales, montoAdelanto})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error || 'No se pudo confirmar'); return; }
+    alert(`Pedido ${orderId} confirmado. Adelanto requerido: ${formatPrice(data.order.pago.adelantoRequerido)}. El cliente ya puede pagarlo desde su seguimiento.`);
+    loadAll();
+  });
+}
+
+/* ---------- TAB 2: LEADS DE COTIZACIÓN ---------- */
+function loadLeads(){
+  fetch('/api/cotizaciones').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const container = document.getElementById('leads-container');
+    container.innerHTML = '';
+
+    if(data.cotizaciones.length === 0){
+      container.innerHTML = '<p class="note">Aún no hay solicitudes de cotización.</p>';
+      return;
+    }
+
+    data.cotizaciones.slice().reverse().forEach(cot=>{
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${cot.id}</span> — ${cot.nombre}
+            <div class="order-meta">📞 ${cot.telefono || 'Sin teléfono'} · 🎉 ${cot.evento} · 👥 ${cot.persons} personas ${cot.fecha ? '· 📅 ' + cot.fecha : ''}</div>
+            <div class="order-meta">💰 Total estimado: ${formatPrice(cot.total)}</div>
+          </div>
+          <span class="badge ${cot.estado === 'atendida' ? 'badge-aceptado' : 'badge-pendiente'}">${cot.estado === 'atendida' ? 'Atendida' : 'Nueva'}</span>
+        </div>
+        <ul style="margin:10px 0 14px 18px;color:#555;">
+          ${cot.detalle.map(d => `<li>${d.nombre} × ${d.qty} — ${formatPrice(d.subtotal)}</li>`).join('')}
+        </ul>
+        ${cot.estado === 'nueva' ? `<div class="order-actions"><button onclick="atenderLead('${cot.id}')" style="background:#28a745;">✔ Marcar como atendida</button></div>` : `<p class="note">Atendida por ${cot.atendidoPor}${cot.notas ? ' — ' + cot.notas : ''}</p>`}
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function atenderLead(id){
+  const notas = prompt('Notas de la asesoría brindada (opcional):') || '';
+  fetch(`/api/cotizaciones/${id}/atender`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({notas})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error || 'No se pudo actualizar'); return; }
+    loadLeads();
+  });
+}
+
+/* ---------- TAB 3: COORDINACIÓN / PERSONAL ---------- */
+function loadCoordinacion(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const activos = data.orders.filter(o => !['pendiente','rechazado','cancelado'].includes(o.status));
+    const container = document.getElementById('coordinacion-container');
+    container.innerHTML = '';
+
+    if(activos.length === 0){
+      container.innerHTML = '<p class="note">No hay pedidos confirmados todavía.</p>';
+      return;
+    }
+
+    activos.forEach(order=>{
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">📅 ${order.clientInfo.fecha} · 📍 ${order.clientInfo.lugar || 'Sin definir'}</div>
+            <div class="order-meta">🧑‍🍳 Personal requerido: ${order.requerimientos.personalTotal} · Asignado: ${order.personalAsignado.length} (${order.personalAsignado.join(', ') || 'ninguno'})</div>
+          </div>
+          <span class="badge badge-${order.status}">${order.status.replace('_',' ')}</span>
+        </div>
+        <div class="form-grid">
+          <input placeholder="Usuario de personal (ej. personal)" id="pers-${order.id}">
+        </div>
+        <div class="order-actions">
+          <button onclick="asignarPersonal('${order.id}')" class="btn-outline">+ Asignar personal</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function asignarPersonal(orderId){
+  const username = document.getElementById('pers-'+orderId).value.trim();
+  if(!username){ alert('Indica el usuario del personal de servicio'); return; }
+  fetch(`/api/orders/${orderId}/asignar-personal`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error || 'No se pudo asignar'); return; }
+    loadAll();
+  });
+}
+
+/* ---------- TAB 3: CAMBIOS Y CANCELACIONES ---------- */
+function loadCambios(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const conSolicitud = data.orders.filter(o => o.solicitudCambio && o.solicitudCambio.estado === 'pendiente');
+    const container = document.getElementById('cambios-container');
+    container.innerHTML = '';
+
+    if(conSolicitud.length === 0){
+      container.innerHTML = '<p class="note">No hay solicitudes de cambio o cancelación pendientes.</p>';
+      return;
+    }
+
+    conSolicitud.forEach(order=>{
+      const sc = order.solicitudCambio;
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">📅 Evento: ${order.clientInfo.fecha} (${sc.diasAnticipacion} días de anticipación al momento de solicitar)</div>
+          </div>
+          <span class="badge badge-pendiente">${sc.tipo === 'cancelacion' ? 'Solicita Cancelación' : 'Solicita Cambio'}</span>
+        </div>
+        <p class="note">📝 Detalle: ${sc.detalle || 'Sin detalle adicional'}</p>
+        <div class="order-actions">
+          <button onclick="resolverCambio('${order.id}', true)" style="background:#28a745;">✔ Aprobar</button>
+          <button onclick="resolverCambio('${order.id}', false)" style="background:#dc3545;">✖ Rechazar</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function resolverCambio(orderId, aprobar){
+  const motivo = aprobar ? '' : prompt('Motivo del rechazo (opcional):') || '';
+  fetch(`/api/orders/${orderId}/resolver-cambio`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({aprobar, motivo})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error || 'No se pudo resolver'); return; }
+    alert('Solicitud ' + (aprobar ? 'aprobada' : 'rechazada') + ' correctamente.');
+    loadAll();
+  });
+}
+
+/* ---------- TAB 4: PROVEEDORES ---------- */
+function loadProveedores(){
+  fetch('/api/proveedores').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const tbody = document.querySelector('#proveedores-table tbody');
+    tbody.innerHTML = '';
+    data.proveedores.forEach(p=>{
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${p.nombre}</td><td>${p.servicio}</td><td>${formatPrice(p.costo)}</td>`;
+      tbody.appendChild(row);
+    });
+  });
+}
+
+function agregarProveedor(){
+  const nombre = document.getElementById('prov-nombre').value.trim();
+  const servicio = document.getElementById('prov-servicio').value.trim();
+  const costo = document.getElementById('prov-costo').value;
+  if(!nombre || !servicio || !costo){ alert('Completa todos los campos del proveedor'); return; }
+  fetch('/api/proveedores',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({nombre, servicio, costo})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error || 'No se pudo registrar'); return; }
+    document.getElementById('prov-nombre').value='';
+    document.getElementById('prov-servicio').value='';
+    document.getElementById('prov-costo').value='';
+    loadProveedores();
+  });
+}
+
+/* ---------- TAB 5: CATÁLOGO ---------- */
+function loadCatalogo(){
+  fetch('/api/menu').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const tbody = document.querySelector('#catalogo-table tbody');
+    tbody.innerHTML = '';
+    data.menu.forEach(m=>{
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${m.nombre}</td><td>${formatPrice(m.precio)}</td><td>${m.personalPorEvento ?? '-'}</td><td>${m.vajillaPorPersona ?? '-'}</td>`;
+      tbody.appendChild(row);
+    });
+  });
+}
+
+function loadAll(){
+  loadCotizaciones();
+  loadLeads();
+  loadCoordinacion();
+  loadCambios();
+  loadProveedores();
+  loadCatalogo();
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  checkLogin();
+  loadAll();
+  setInterval(loadAll, 12000);
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Seguimiento de Pedido — Elite Catering</title>
+  <style>
+    header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
+    .nav-container { display: flex; align-items: center; gap: 15px; }
+    .nav-link { text-decoration: none; font-weight: 600; color: #ddd; transition: color 0.2s; }
+    .nav-link:hover { color: #ffb300; }
+    .tracking-step.rejected, .tracking-step.cancelled { background: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <strong>📦 Mis Pedidos</strong>
+      <span>— Seguimiento y gestión</span>
+    </div>
+    <nav class="nav-container">
+      <a href="index.html" class="nav-link">Inicio</a>
+      <a href="catalogo.html" class="nav-link">Catálogo</a>
+      <a href="carrito.html" class="nav-link">🛒 Carrito</a>
+      <a href="#" class="nav-link" onclick="logout(); return false;" style="color:#ff5252;">Cerrar sesión</a>
+    </nav>
+  </header>
+
+  <main class="wrap" id="orders-wrap">
+    <p class="note">Cargando tus pedidos...</p>
+  </main>
+
+  <!-- MODAL DE PAGO -->
+  <div id="modalPago" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:9999;">
+    <div style="background:white;padding:28px;border-radius:14px;width:420px;max-width:92%;">
+
+      <h2 style="margin-bottom:5px;">Pagar adelanto</h2>
+      <p class="note">Monto a pagar: <strong style="color:#d99000;" id="pago-monto">S/0</strong></p>
+
+      <!-- PASO 1: ELEGIR MÉTODO -->
+      <div id="pago-paso-metodo" style="margin-top:18px;">
+        <button class="btn" style="width:100%;margin-bottom:10px;" onclick="elegirMetodo('tarjeta')">💳 Pagar con Tarjeta de Crédito / Débito</button>
+        <button class="btn" style="width:100%;background:#7c3aed;" onclick="elegirMetodo('yape')">📱 Pagar con Yape</button>
+        <button class="btn-small" style="width:100%;margin-top:12px;" onclick="cerrarModalPago()">Cancelar</button>
+      </div>
+
+      <!-- PASO 2A: TARJETA -->
+      <div id="pago-paso-tarjeta" style="display:none;margin-top:18px;">
+        <input id="tarjeta-numero" placeholder="Número de tarjeta (16 dígitos)" maxlength="19">
+        <input id="tarjeta-titular" placeholder="Nombre del titular">
+        <div style="display:flex;gap:10px;">
+          <input id="tarjeta-vencimiento" placeholder="MM/AA" style="flex:1;">
+          <input id="tarjeta-cvv" placeholder="CVV" maxlength="4" style="flex:1;">
+        </div>
+        <button class="btn" style="width:100%;margin-top:10px;background:#28a745;" onclick="confirmarPagoTarjeta()">Confirmar pago</button>
+        <button class="btn-small" style="width:100%;margin-top:8px;" onclick="elegirMetodo('')">← Volver</button>
+      </div>
+
+      <!-- PASO 2B: YAPE -->
+      <div id="pago-paso-yape" style="display:none;margin-top:18px;text-align:center;">
+        <div style="font-size:2.5rem;">📱</div>
+        <p class="note">Ingresa el número de celular asociado a tu cuenta Yape para simular la notificación de pago.</p>
+        <input id="yape-numero" placeholder="Número de celular (9 dígitos)" maxlength="9" style="text-align:center;">
+        <button class="btn" style="width:100%;margin-top:10px;background:#7c3aed;" onclick="confirmarPagoYape()">Confirmar pago con Yape</button>
+        <button class="btn-small" style="width:100%;margin-top:8px;" onclick="elegirMetodo('')">← Volver</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let sesionActual = null;
+
+    function logout() {
+      fetch('/api/logout', { method: 'POST' }).finally(() => location = 'login.html');
+    }
+
+    function formatPrice(value) {
+      return 'S/' + Number(value).toLocaleString('es-PE');
+    }
+
+    function calcularTotal(order) {
+      return order.cart.reduce((s, it) => s + Number(it.price) * Number(it.qty || 1), 0) * 1.18;
+    }
+
+    function diasRestantes(fecha) {
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const f = new Date(fecha + 'T00:00:00');
+      return Math.floor((f.getTime() - hoy.getTime()) / 86400000);
+    }
+
+    function pasosHTML(order) {
+      const s = order.status;
+      const orden = ['pendiente','confirmado','pago_confirmado','aceptado','en_preparacion','listo_despacho','en_ruta','entregado','cerrado'];
+      const idx = orden.indexOf(s);
+
+      if (s === 'rechazado') {
+        return `
+          <div class="tracking-step completed"><div class="step-icon">✓</div>Pedido Recibido</div>
+          <div class="tracking-step rejected"><div class="step-icon">✖</div>Solicitud Rechazada por Logística (sin disponibilidad)</div>
+        `;
+      }
+      if (s === 'cancelado') {
+        return `
+          <div class="tracking-step completed"><div class="step-icon">✓</div>Pedido Recibido</div>
+          <div class="tracking-step cancelled"><div class="step-icon">✖</div>Pedido Cancelado</div>
+        `;
+      }
+
+      const etapas = [
+        { key: 'pendiente', label: 'Pedido Recibido' },
+        { key: 'confirmado', label: 'Revisado y Coordinado por Ventas' },
+        { key: 'pago_confirmado', label: 'Adelanto Pagado' },
+        { key: 'aceptado', label: 'Aprobado por Logística' },
+        { key: 'en_preparacion', label: 'En Preparación en Cocina' },
+        { key: 'listo_despacho', label: 'Listo para Despacho' },
+        { key: 'en_ruta', label: 'En Ruta al Evento' },
+        { key: 'entregado', label: 'Entregado en el Evento' },
+        { key: 'cerrado', label: 'Servicio Finalizado' }
+      ];
+
+      return etapas.map((etapa, i) => {
+        const etapaIdx = orden.indexOf(etapa.key);
+        let cls = 'pending', icon = '○';
+        if (etapaIdx < idx || (etapaIdx === idx && ['cerrado'].includes(s))) { cls = 'completed'; icon = '✓'; }
+        else if (etapaIdx === idx) { cls = 'current'; icon = '➜'; }
+        return `<div class="tracking-step ${cls}"><div class="step-icon">${icon}</div>${etapa.label}</div>`;
+      }).join('');
+    }
+
+    function accionesHTML(order) {
+      let html = '';
+
+      // Pago del adelanto
+      if (order.status === 'confirmado') {
+        html += `
+          <div class="alert-box alert-info">
+            💳 Tu pedido fue revisado. Para continuar, paga el adelanto de <strong>${formatPrice(order.pago.adelantoRequerido)}</strong>.
+          </div>
+          <button onclick="abrirModalPago('${order.id}', ${order.pago.adelantoRequerido})" style="background:#28a745;">Pagar adelanto ahora</button>
+        `;
+      }
+
+      if (order.status !== 'pendiente' && order.status !== 'confirmado' && order.pago.adelantoPagado) {
+        html += `<div class="alert-box alert-success" style="margin-top:10px;">✅ Adelanto de ${formatPrice(order.pago.montoAdelanto)} pagado vía ${order.pago.metodoPago === 'yape' ? 'Yape' : 'Tarjeta'} — Operación ${order.pago.numeroOperacion}</div>`;
+      }
+
+      // Solicitud de cambio / cancelación
+      const puedeSolicitar = !['entregado','cerrado','cancelado','rechazado'].includes(order.status) && !(order.solicitudCambio && order.solicitudCambio.estado === 'pendiente');
+      if (puedeSolicitar) {
+        const dias = diasRestantes(order.clientInfo.fecha);
+        if (dias < 7) {
+          html += `<div class="alert-box alert-warning">⚠️ Tu evento es en ${dias} día(s). No se permiten cambios ni cancelaciones con menos de 1 semana de anticipación, ya que Cocina pudo haber comprado los insumos.</div>`;
+        } else {
+          html += `
+            <div class="order-actions" style="margin-top:15px;">
+              <button onclick="solicitarCambio('${order.id}','cambio')" class="btn-outline">🔄 Solicitar cambio</button>
+              <button onclick="solicitarCambio('${order.id}','cancelacion')" class="btn-danger-outline">✖ Solicitar cancelación</button>
+            </div>
+          `;
+        }
+      }
+
+      if (order.solicitudCambio) {
+        const sc = order.solicitudCambio;
+        const estadoTxt = { pendiente: '⏳ En revisión por Ventas', aprobado: '✅ Aprobada', rechazado: '❌ Rechazada' }[sc.estado];
+        html += `<div class="alert-box alert-info" style="margin-top:12px;">Solicitud de ${sc.tipo}: ${estadoTxt}${sc.motivo ? ' — ' + sc.motivo : ''}</div>`;
+      }
+
+      return html;
+    }
+
+    let pedidoEnPago = null;
+
+    function abrirModalPago(orderId, monto) {
+      pedidoEnPago = orderId;
+      document.getElementById('pago-monto').textContent = formatPrice(monto);
+      document.getElementById('pago-paso-metodo').style.display = 'block';
+      document.getElementById('pago-paso-tarjeta').style.display = 'none';
+      document.getElementById('pago-paso-yape').style.display = 'none';
+      document.getElementById('modalPago').style.display = 'flex';
+    }
+
+    function cerrarModalPago() {
+      document.getElementById('modalPago').style.display = 'none';
+      pedidoEnPago = null;
+    }
+
+    function elegirMetodo(metodo) {
+      document.getElementById('pago-paso-metodo').style.display = metodo ? 'none' : 'block';
+      document.getElementById('pago-paso-tarjeta').style.display = metodo === 'tarjeta' ? 'block' : 'none';
+      document.getElementById('pago-paso-yape').style.display = metodo === 'yape' ? 'block' : 'none';
+    }
+
+    function confirmarPagoTarjeta() {
+      const numeroTarjeta = document.getElementById('tarjeta-numero').value.trim();
+      const titular = document.getElementById('tarjeta-titular').value.trim();
+      const vencimiento = document.getElementById('tarjeta-vencimiento').value.trim();
+      const cvv = document.getElementById('tarjeta-cvv').value.trim();
+      if (!numeroTarjeta || !titular || !vencimiento || !cvv) {
+        alert('Completa todos los datos de la tarjeta.');
+        return;
+      }
+      ejecutarPago({ metodoPago: 'tarjeta', numeroTarjeta });
+    }
+
+    function confirmarPagoYape() {
+      const numeroYape = document.getElementById('yape-numero').value.trim();
+      if (!numeroYape) { alert('Ingresa tu número de Yape.'); return; }
+      ejecutarPago({ metodoPago: 'yape', numeroYape });
+    }
+
+    function ejecutarPago(body) {
+      fetch(`/api/orders/${pedidoEnPago}/pagar-adelanto`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'No se pudo procesar el pago'); return; }
+        cerrarModalPago();
+        alert(`✅ Pago registrado correctamente. Operación: ${data.order.pago.numeroOperacion}. Tu pedido pasará a evaluación de Logística.`);
+        cargarPedidos();
+      });
+    }
+
+    function solicitarCambio(orderId, tipo) {
+      const detalle = prompt(tipo === 'cancelacion' ? 'Motivo de la cancelación:' : 'Describe el cambio que necesitas:');
+      if (detalle === null) return;
+      fetch(`/api/orders/${orderId}/solicitar-cambio`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, detalle })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'No se pudo enviar la solicitud'); return; }
+        alert('Tu solicitud fue enviada a Ventas para su revisión.');
+        cargarPedidos();
+      });
+    }
+
+    function cargarPedidos() {
+      fetch('/api/orders/mine').then(r => r.json()).then(data => {
+        const wrap = document.getElementById('orders-wrap');
+        wrap.innerHTML = '';
+
+        if (!data.ok || data.orders.length === 0) {
+          wrap.innerHTML = `
+            <div class="panel" style="text-align:center;">
+              <h1>No tienes ningún pedido registrado</h1>
+              <p class="note">Añade banquetes desde tu catálogo y confirma tu cotización para enviar la solicitud.</p>
+              <a href="catalogo.html" class="btn" style="margin-top:15px;">Ir al Catálogo</a>
+            </div>
+          `;
+          return;
+        }
+
+        data.orders.slice().reverse().forEach(order => {
+          const panel = document.createElement('div');
+          panel.className = 'panel';
+          panel.innerHTML = `
+            <h2>Pedido <span style="color:#ffb300;">${order.id}</span> — ${order.clientInfo.evento}</h2>
+            <p class="note">📅 ${order.clientInfo.fecha} · 👥 ${order.clientInfo.persons} personas · 💰 Total: ${formatPrice(calcularTotal(order))}</p>
+            <div class="tracking-container">${pasosHTML(order)}</div>
+            ${accionesHTML(order)}
+          `;
+          wrap.appendChild(panel);
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      try {
+        const s = await (await fetch('/api/session')).json();
+        if (!s.loggedIn) { location = 'login.html'; return; }
+        if (s.role !== 'cliente' && s.role !== 'admin') { location = 'index.html'; return; }
+        sesionActual = s;
+        cargarPedidos();
+        setInterval(cargarPedidos, 10000);
+      } catch (e) {
+        console.error('Error sincronizando el tracking:', e);
+      }
+    });
+  </script>
+</body>
+</html>

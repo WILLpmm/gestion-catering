@@ -19,7 +19,7 @@ function getClientAccounts() {
 function saveClientAccounts(accounts) {
   sessionStorage.setItem('clientAccounts', JSON.stringify(accounts));
 }
-function registerClient() {
+async function registerClient() {
   hideMessage();
   const username = document.getElementById('usuario').value.trim();
   const password = document.getElementById('password').value.trim();
@@ -32,21 +32,19 @@ function registerClient() {
     showMessage('error', 'Las contraseñas no coinciden.');
     return;
   }
-  if (username.toLowerCase() === 'admin') {
-    showMessage('error', 'No puedes usar el nombre de usuario admin.');
-    return;
+  try {
+    const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok) { showMessage('error', j.error || 'Error al registrar'); return; }
+    
+    showMessage('success', 'Registro exitoso. Ahora puedes iniciar sesión.');
+    
+    // CAMBIO CRÍTICO: Redirecciona al login en vez de a index.html después de 1.2 segundos
+    setTimeout(() => location = 'login.html', 1200);
+    
+  } catch (e) {
+    showMessage('error', 'Error de conexión. Intenta otra vez.');
   }
-  const accounts = getClientAccounts();
-  if (accounts.some(account => account.username.toLowerCase() === username.toLowerCase())) {
-    showMessage('error', 'Ese usuario ya existe. Elige uno distinto.');
-    return;
-  }
-  accounts.push({ username, password });
-  saveClientAccounts(accounts);
-  showMessage('success', 'Registro exitoso. Ahora puedes iniciar sesión.');
-  setTimeout(() => {
-    location = 'index.html';
-  }, 1500);
 }
 </script></head>
 <body class="login"><div class="card">
@@ -57,5 +55,6 @@ function registerClient() {
 <input id="password" type="password" placeholder="Contraseña" autocomplete="off">
 <input id="password-confirm" type="password" placeholder="Confirmar contraseña" autocomplete="off">
 <button onclick="registerClient()">Registrar</button>
-<p class="center-text">¿Ya tienes cuenta? <a href="index.html" class="link-button">Iniciar sesión</a></p>
+<!-- ENLACE CORREGIDO: Redirige a login.html si ya tiene una cuenta -->
+<p class="center-text" style="margin-top: 15px; text-align: center;">¿Ya tienes cuenta? <a href="login.html" class="link-button" style="color: #d99000; font-weight: bold; text-decoration: none;">Iniciar sesión</a></p>
 </div></body></html>

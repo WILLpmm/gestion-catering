@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="estilos.css">
+<title>Logística | Elite Catering</title>
+<style>
+header{ display:flex; justify-content:space-between; align-items:center; padding:15px 25px; background:#1f1f1f; border-bottom:4px solid #d99000; }
+header strong{ color:#ffb300; font-size:1.4rem; }
+.tabs{ display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+.tab-btn{ width:auto; min-width:auto; padding:10px 18px; background:#444; }
+.tab-btn.active{ background:#d99000; }
+.tab-view{ display:none; }
+.tab-view.active{ display:block; }
+.capacity-row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>🚚 Área de Logística</strong>
+  <div>
+    <a href="menu.html" class="btn-small">Menú</a>
+    <a href="#" onclick="logout();return false;" class="btn-small" style="background:#dc3545;">Cerrar sesión</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="panel">
+  <h2>Panel de Logística</h2>
+  <p class="note">Valida disponibilidad, organiza transporte/entrega y registra el retorno de equipos físicos.</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="btn-tab-solicitudes" onclick="switchTab('solicitudes')">⏳ Solicitudes Pendientes</button>
+  <button class="tab-btn" id="btn-tab-transporte" onclick="switchTab('transporte')">🚛 Transporte / Entrega</button>
+  <button class="tab-btn" id="btn-tab-retorno" onclick="switchTab('retorno')">📦 Retorno de Equipos</button>
+</div>
+
+<!-- TAB 1: SOLICITUDES (aceptar/rechazar tras pago confirmado) -->
+<div id="tab-solicitudes" class="tab-view active">
+  <div class="panel">
+    <h3>Pedidos con pago de adelanto confirmado, listos para evaluar</h3>
+    <div id="solicitudes-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- TAB 2: TRANSPORTE -->
+<div id="tab-transporte" class="tab-view">
+  <div class="panel">
+    <h3>Pedidos listos para despacho o en ruta</h3>
+    <div id="transporte-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+<!-- TAB 3: RETORNO DE EQUIPOS -->
+<div id="tab-retorno" class="tab-view">
+  <div class="panel">
+    <h3>Pedidos entregados — Registrar retorno de equipos</h3>
+    <div id="retorno-container"><p class="note">Cargando...</p></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+
+function checkLogin(){
+  fetch('/api/session').then(r=>r.json()).then(s=>{
+    if(!s.loggedIn){ location='login.html'; return; }
+    if(s.role!=='logistica' && s.role!=='admin'){ location='index.html'; }
+  }).catch(()=>{ location='login.html'; });
+}
+
+function logout(){
+  fetch('/api/logout',{method:'POST'}).finally(()=>{ location='login.html'; });
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('btn-tab-'+tab).classList.add('active');
+}
+
+function formatPrice(value){ return 'S/' + Number(value).toLocaleString('es-PE'); }
+
+function calcularTotal(order){
+  return order.cart.reduce((sum,item)=> sum + Number(item.price)*Number(item.qty||1), 0);
+}
+
+/* ---------- TAB 1: SOLICITUDES PENDIENTES ---------- */
+function loadSolicitudes(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const pendientes = data.orders.filter(o => o.status === 'pago_confirmado');
+    const container = document.getElementById('solicitudes-container');
+    container.innerHTML = '';
+
+    if(pendientes.length === 0){
+      container.innerHTML = '<p class="note">No hay solicitudes pendientes de evaluación.</p>';
+      return;
+    }
+
+    pendientes.forEach(order=>{
+      const total = calcularTotal(order);
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.id = 'card-' + order.id;
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">📅 ${order.clientInfo.fecha} · 🎉 ${order.clientInfo.evento} · 👥 ${order.clientInfo.persons} personas</div>
+            <div class="order-meta">📍 ${order.clientInfo.lugar || 'Sin lugar especificado'}</div>
+            <div class="order-meta">💰 Total: ${formatPrice(total*1.18)} (IGV incluido) — Adelanto pagado: ${formatPrice(order.pago.montoAdelanto)} vía ${order.pago.metodoPago === 'yape' ? '📱 Yape' : '💳 Tarjeta'} (Op. ${order.pago.numeroOperacion})</div>
+            <div class="order-meta">🧑‍🍳 Personal requerido: ${order.requerimientos.personalTotal} · 🍽️ Vajilla requerida: ${order.requerimientos.vajillaTotal}</div>
+          </div>
+          <span class="badge badge-pago_confirmado">Pago Confirmado</span>
+        </div>
+        <div id="ocupacion-${order.id}" class="note">Verificando disponibilidad de la fecha...</div>
+        <div class="order-actions">
+          <button onclick="evaluar('${order.id}','aceptado')" style="background:#28a745;">✔ Aceptar</button>
+          <button onclick="evaluar('${order.id}','rechazado')" style="background:#dc3545;">✖ Rechazar</button>
+        </div>
+      `;
+      container.appendChild(card);
+
+      fetch('/api/capacidad/' + order.clientInfo.fecha).then(r=>r.json()).then(cap=>{
+        const div = document.getElementById('ocupacion-'+order.id);
+        if(!cap.ok) return;
+        const o = cap.ocupacion;
+        const excede = o.excedeEventos || o.excedeVajilla || o.excedePersonal;
+        div.className = excede ? 'alert-box alert-danger' : 'alert-box alert-success';
+        div.innerHTML = excede
+          ? `⚠️ Capacidad excedida para ${o.fecha}: eventos ${o.eventos}/${o.limites.maxEventosPorDia}, vajilla ${o.vajilla}/${o.limites.maxVajillaDisponible}, personal ${o.personal}/${o.limites.maxPersonalDisponible}`
+          : `✅ Disponibilidad OK para ${o.fecha}: eventos ${o.eventos}/${o.limites.maxEventosPorDia}, vajilla ${o.vajilla}/${o.limites.maxVajillaDisponible}, personal ${o.personal}/${o.limites.maxPersonalDisponible}`;
+      });
+    });
+  });
+}
+
+function evaluar(orderId, status){
+  fetch(`/api/orders/${orderId}/status`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){
+      alert((data.error||'No se pudo actualizar') + (data.ocupacion ? `\n\nEventos: ${data.ocupacion.eventos}/${data.ocupacion.limites.maxEventosPorDia}\nVajilla: ${data.ocupacion.vajilla}/${data.ocupacion.limites.maxVajillaDisponible}\nPersonal: ${data.ocupacion.personal}/${data.ocupacion.limites.maxPersonalDisponible}` : ''));
+      return;
+    }
+    alert('Pedido ' + orderId + ' actualizado a: ' + status.toUpperCase());
+    loadAll();
+  });
+}
+
+/* ---------- TAB 2: TRANSPORTE ---------- */
+function loadTransporte(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const activos = data.orders.filter(o => ['listo_despacho','en_ruta'].includes(o.status));
+    const container = document.getElementById('transporte-container');
+    container.innerHTML = '';
+
+    if(activos.length === 0){
+      container.innerHTML = '<p class="note">No hay pedidos listos para despacho en este momento.</p>';
+      return;
+    }
+
+    activos.forEach(order=>{
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">📅 ${order.clientInfo.fecha} · 📍 ${order.clientInfo.lugar || 'Sin lugar especificado'}</div>
+          </div>
+          <span class="badge badge-${order.status}">${order.status === 'en_ruta' ? 'En Ruta' : 'Listo para Despacho'}</span>
+        </div>
+        <div class="form-grid" style="margin-top:10px;">
+          <input placeholder="Vehículo asignado" id="veh-${order.id}" value="${order.transporte.vehiculo || ''}">
+          <input placeholder="Horario de salida (ej. 10:00 AM)" id="hora-${order.id}" value="${order.transporte.horarioSalida || ''}">
+        </div>
+        <div class="order-actions">
+          <button onclick="guardarTransporte('${order.id}', false, false)" class="btn-outline">Guardar datos</button>
+          ${order.status === 'listo_despacho' ? `<button onclick="guardarTransporte('${order.id}', true, false)" style="background:#0d6efd;">🚚 Marcar en ruta</button>` : ''}
+          ${order.status === 'en_ruta' ? `<button onclick="guardarTransporte('${order.id}', false, true)" style="background:#198754;">✅ Marcar entregado</button>` : ''}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function guardarTransporte(orderId, marcarEnRuta, marcarEntregado){
+  const vehiculo = document.getElementById('veh-'+orderId).value;
+  const horarioSalida = document.getElementById('hora-'+orderId).value;
+  fetch(`/api/orders/${orderId}/transporte`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({vehiculo, horarioSalida, marcarEnRuta, marcarEntregado})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error||'No se pudo guardar'); return; }
+    loadAll();
+  });
+}
+
+/* ---------- TAB 3: RETORNO DE EQUIPOS ---------- */
+function loadRetorno(){
+  fetch('/api/orders').then(r=>r.json()).then(data=>{
+    if(!data.ok) return;
+    const entregados = data.orders.filter(o => o.status === 'entregado');
+    const container = document.getElementById('retorno-container');
+    container.innerHTML = '';
+
+    if(entregados.length === 0){
+      container.innerHTML = '<p class="note">No hay pedidos pendientes de registrar retorno de equipos.</p>';
+      return;
+    }
+
+    entregados.forEach(order=>{
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-id">${order.id}</span> — ${order.clientInfo.cliente}
+            <div class="order-meta">🍽️ Vajilla entregada: ${order.requerimientos.vajillaTotal}</div>
+          </div>
+          <span class="badge badge-entregado">Entregado</span>
+        </div>
+        <div class="form-grid" style="margin-top:10px;">
+          <input type="number" min="0" placeholder="Vajilla devuelta" id="vaj-${order.id}">
+          <input type="number" min="0" placeholder="Mantelería devuelta" id="man-${order.id}">
+          <input type="number" min="0" placeholder="Samovares devueltos" id="sam-${order.id}">
+        </div>
+        <textarea id="merma-${order.id}" rows="2" placeholder="Reporte de mermas, pérdidas o roturas (opcional)"></textarea>
+        <div class="order-actions">
+          <button onclick="registrarRetorno('${order.id}')" style="background:#198754;">📦 Registrar retorno y cerrar pedido</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function registrarRetorno(orderId){
+  const vajillaDevuelta = document.getElementById('vaj-'+orderId).value;
+  const manteleriaDevuelta = document.getElementById('man-'+orderId).value;
+  const samovaresDevueltos = document.getElementById('sam-'+orderId).value;
+  const mermas = document.getElementById('merma-'+orderId).value;
+  fetch(`/api/orders/${orderId}/retorno-equipos`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({vajillaDevuelta, manteleriaDevuelta, samovaresDevueltos, mermas})
+  }).then(r=>r.json()).then(data=>{
+    if(!data.ok){ alert(data.error||'No se pudo registrar'); return; }
+    alert('Retorno registrado. Pedido ' + orderId + ' cerrado.');
+    loadAll();
+  });
+}
+
+function loadAll(){
+  loadSolicitudes();
+  loadTransporte();
+  loadRetorno();
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  checkLogin();
+  loadAll();
+  setInterval(loadAll, 12000);
+});
+
+</script>
+
+</body>
+</html>

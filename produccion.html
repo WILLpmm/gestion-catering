@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Producción</title>
+</head>
+<body>
+  <header><strong>🏭 Producción</strong><span>Estado de preparación</span></header>
+  <main class="wrap">
+    <div class="panel">
+      <h1>Producción</h1>
+      <label><input type="checkbox" id="insumos-recibidos"> Insumos recibidos</label>
+      <br><br>
+      <label><input type="checkbox" id="en-preparacion"> En preparación</label>
+      <br><br>
+      <label><input type="checkbox" id="listo-despacho"> Listo para despacho</label>
+      <br><br>
+      <button class="btn" onclick="actualizarEstado(); return false;">Actualizar</button>
+      <div class="footer-buttons">
+        <a href="logistica.html" class="btn-small">Volver a Logística</a>
+        <a href="index.html" class="btn-small">Inicio</a>
+      </div>
+    </div>
+  </main>
+  <script>
+    function checkLogin() {
+      fetch('/api/session').then(r => r.json()).then(s => {
+        if (!s.loggedIn) {
+          location = 'index.html';
+          return;
+        }
+        if (s.role !== 'logistica' && s.role !== 'admin') {
+          location = 'index.html';
+        }
+      }).catch(() => {
+        location = 'index.html';
+      });
+    }
+
+    function actualizarEstado() {
+      const insumos = document.getElementById('insumos-recibidos').checked;
+      const preparacion = document.getElementById('en-preparacion').checked;
+      const despacho = document.getElementById('listo-despacho').checked;
+      alert('Estado actualizado:\n- Insumos recibidos: ' + (insumos ? 'Sí' : 'No') + '\n- En preparación: ' + (preparacion ? 'Sí' : 'No') + '\n- Listo para despacho: ' + (despacho ? 'Sí' : 'No'));
+    }
+
+    document.addEventListener('DOMContentLoaded', checkLogin);
+  </script>
+</body>
+</html>

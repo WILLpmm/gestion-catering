@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Pedido</title>
+</head>
+<body>
+  <header><strong>📝 Pedido</strong><span>Completa los datos de tu evento</span></header>
+  <main class="wrap">
+    <div class="panel">
+      <h2>Formulario de pedido</h2>
+      <p class="note">Llena los datos y agrega el pedido al carrito para continuar con la cotización.</p>
+      <input id="cliente-name" placeholder="Nombre del cliente" autocomplete="name">
+      <input id="evento-date" type="date">
+      <select id="evento-type">
+        <option value="">Selecciona tipo de evento</option>
+        <option value="Boda">Boda</option>
+        <option value="Cumpleaños">Cumpleaños</option>
+        <option value="Corporativo">Corporativo</option>
+        <option value="Evento escolar">Evento escolar</option>
+      </select>
+      <input id="cantidad-personas" type="number" placeholder="Cantidad de personas" min="1" value="1">
+      <select id="service-type">
+        <option value="">Selecciona el servicio</option>
+        <option value="Buffet Premium" data-price="1500">Buffet Premium — S/1500</option>
+        <option value="Asamblea escolar" data-price="500">Asamblea escolar — S/500</option>
+        <option value="Almuerzo Ejecutivo" data-price="900">Almuerzo Ejecutivo — S/900</option>
+      </select>
+      <textarea id="order-notes" rows="4" placeholder="Notas adicionales (opcional)"></textarea>
+      <button class="btn" onclick="addToCart();return false;">Agregar pedido al carrito</button>
+      <div class="footer-buttons">
+        <a href="carrito.html" class="btn-small">Ir al carrito</a>
+        <a href="menu.html" class="btn-small">Menú</a>
+      </div>
+    </div>
+  </main>
+  <script>
+    function checkLogin() {
+      fetch('/api/session').then(r => r.json()).then(s => {
+        if (!s.loggedIn) {
+          location = 'index.html';
+          return;
+        }
+        if (s.role !== 'cliente' && s.role !== 'admin') {
+          location = 'index.html';
+        }
+      }).catch(() => {
+        location = 'index.html';
+      });
+    }
+
+    function addToCart() {
+      const cliente = document.getElementById('cliente-name').value.trim();
+      const fecha = document.getElementById('evento-date').value;
+      const evento = document.getElementById('evento-type').value;
+      const persons = Number(document.getElementById('cantidad-personas').value || 1);
+      const serviceSelect = document.getElementById('service-type');
+      const service = serviceSelect.value;
+      const servicePrice = Number(serviceSelect.selectedOptions[0]?.dataset.price || 0);
+      const notes = document.getElementById('order-notes').value.trim();
+
+      if (!cliente || !fecha || !evento || !persons || !service) {
+        alert('Por favor completa todos los campos obligatorios antes de agregar el pedido al carrito.');
+        return;
+      }
+
+      const clientInfo = { cliente, evento, fecha, persons, service, notes };
+      sessionStorage.setItem('clientInfo', JSON.stringify(clientInfo));
+
+      const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+      const existing = cart.find(item => item.item === service && item.price === servicePrice);
+      if (existing) {
+        existing.qty = (existing.qty || 1) + 1;
+      } else {
+        cart.push({ item: service, price: servicePrice, qty: 1, notes });
+      }
+      sessionStorage.setItem('cart', JSON.stringify(cart));
+
+      alert('Pedido agregado al carrito. Ahora puedes continuar a la cotización.');
+      location = 'carrito.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', checkLogin);
+  </script>
+</body>
+</html>

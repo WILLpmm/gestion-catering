@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Iniciar sesión — Elite Catering</title>
+  <script>
+    // FUNCIÓN DE REDIRECCIÓN CORREGIDA
+    function redirectByRole(role) {
+      if (role === 'admin') {
+        location = 'menu.html'; // El admin va a su panel de columna izquierda
+      } else if (role === 'cliente') {
+        location = 'index.html'; // El cliente va directo al Inicio público
+      } else if (role === 'ventas') {
+        location = 'ventas.html';
+      } else if (role === 'logistica') {
+        location = 'logistica.html';
+      } else if (role === 'cocina') {
+        location = 'cocina.html';
+      } else if (role === 'personal') {
+        location = 'personal.html';
+      } else {
+        location = 'index.html';
+      }
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('login-error');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+
+    function hideError() {
+      const errorDiv = document.getElementById('login-error');
+      errorDiv.textContent = '';
+      errorDiv.style.display = 'none';
+    }
+
+    async function ingresar() {
+      hideError();
+      const usuario = document.getElementById('usuario').value.trim();
+      const password = document.getElementById('password').value.trim();
+      
+      if (!usuario || !password) {
+        showError('Por favor completa usuario y contraseña.');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usuario, password })
+        });
+        
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          showError(j.error || 'Usuario o contraseña incorrectos.');
+          return;
+        }
+        
+        const data = await res.json();
+        redirectByRole(data.role);
+        
+      } catch (err) {
+        showError('Error de conexión. Intenta de nuevo.');
+      }
+    }
+
+    // Comprobación al cargar la página por si ya hay sesión abierta
+    document.addEventListener('DOMContentLoaded', async function () {
+      try {
+        const res = await fetch('/api/session');
+        const s = await res.json();
+        if (s.loggedIn) {
+          redirectByRole(s.role);
+        }
+      } catch (e) { /* ignorar */ }
+    });
+  </script>
+</head>
+<body class="login">
+  <div class="card">
+    <h1>🍽️ Elite Catering</h1>
+    <div id="login-error" class="error-message"></div>
+    <input id="usuario" placeholder="Usuario" autocomplete="off">
+    <input id="password" type="password" placeholder="Contraseña" autocomplete="off">
+    <button onclick="ingresar()">Ingresar</button>
+    <p class="center-text" style="margin-top: 15px; text-align: center;">¿No tienes cuenta? <a href="registro.html" class="link-button" style="color: #d99000; font-weight: bold; text-decoration: none;">Regístrate aquí</a></p>
+  </div>
+</body>
+</html>

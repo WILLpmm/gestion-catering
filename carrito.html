@@ -1,46 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="estilos.css">
+  <title>Carrito — Elite Catering</title>
+  <style>
+    /* Estilos integrados con tu diseño profesional */
+    header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background-color: #1f1f1f; border-bottom: 4px solid #d99000; }
+    .nav-container { display: flex; align-items: center; gap: 15px; }
+    .nav-link { text-decoration: none; font-weight: 600; color: #ddd; transition: color 0.2s; }
+    .nav-link:hover { color: #ffb300; }
+    .auth-link { color: #ffb300; border-left: 2px solid #444; padding-left: 15px; }
+  </style>
+</head>
+<body>
+  
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR UNIFICADA -->
+  <header>
+    <div><strong style="color: #ffb300; font-size: 1.4rem;">🛒 Carrito de Compras</strong></div>
+    <nav class="nav-container">
+      <a href="index.html" class="nav-link">Inicio</a>
+      <a href="catalogo.html" class="nav-link">Catálogo</a>
+      <a href="carrito.html" class="nav-link" style="color:#ffb300;">🛒 Carrito</a>
+      <a href="seguimiento.html" class="nav-link">📦 Mis Pedidos</a>
+      <a href="login.html" class="nav-link auth-link">Iniciar sesión</a>
+    </nav>
+  </header>
 
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="estilos.css"><title>Carrito</title></head>
-<body><header><strong>🛒 Carrito</strong><a href="cliente.html" class="btn">Volver</a></header>
-<div class="wrap"><div class="panel">
-<h2>Resumen</h2>
-<table id="cart-table">
-<tr><th>Servicio</th><th>Cantidad</th><th>Precio</th></tr>
-</table>
-<div class="total" id="cart-total">Total: S/0</div>
-<button id="checkout-btn">Continuar (siguiente etapa)</button>
-</div></div>
-<script>
-function checkLogin() {
-  if (sessionStorage.getItem('loggedIn') !== 'true') {
-    location = 'index.html';
+  <div class="wrap" style="padding: 20px;">
+    <div class="panel">
+      <h2>Resumen de lo seleccionado</h2>
+      <table id="cart-table" border="1" style="width:100%; border-collapse: collapse; text-align: left; margin-top:15px;">
+        <tr style="background-color: #f2f2f2;">
+          <th style="padding:10px; background: #d99000; color: white;">Servicio</th>
+          <th style="padding:10px; background: #d99000; color: white;">Cantidad</th>
+          <th style="padding:10px; background: #d99000; color: white;">Precio</th>
+          <th style="padding:10px; background: #d99000; color: white;">Acciones</th>
+        </tr>
+      </table>
+      <div class="total" id="cart-total" style="font-size:1.8rem; color:#d99000; font-weight:bold; margin-top:20px; text-align:right;">Total: S/0</div>
+      <div style="text-align: right; margin-top: 15px;">
+        <!-- ACCIÓN CORREGIDA: Invoca a la etapa final de cotización -->
+        <button id="checkout-btn" onclick="proceedToQuote()" style="padding:14px 28px; background-color:#d99000; color:white; border:none; border-radius:12px; font-size:16px; cursor:pointer; font-weight:bold; transition: 0.3s;">Continuar a la Cotización Final 📄</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function checkLogin() {
+    fetch('/api/session').then(r=>r.json()).then(s=>{
+      if (!s.loggedIn) { location = 'login.html'; return; }
+      if (s.role !== 'cliente' && s.role !== 'admin') { location = 'index.html'; }
+    }).catch(()=>{ location = 'index.html'; });
   }
-}
-function formatPrice(value) {
-  return 'S/' + Number(value).toLocaleString('es-PE');
-}
-document.addEventListener('DOMContentLoaded', function() {
-  checkLogin();
-  const params = new URLSearchParams(window.location.search);
-  const item = params.get('item');
-  const price = params.get('price');
-  const qty = Number(params.get('qty') || 1);
-  const table = document.getElementById('cart-table');
-  const totalElem = document.getElementById('cart-total');
-  const button = document.getElementById('checkout-btn');
-  if (item && price) {
-    const row = document.createElement('tr');
-    row.innerHTML = `<td>${item}</td><td>${qty}</td><td>${formatPrice(price)}</td>`;
-    table.appendChild(row);
-    totalElem.textContent = 'Total: ' + formatPrice(Number(price) * qty);
-    button.disabled = false;
-  } else {
-    const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="3" style="text-align:center">No hay ningún elemento seleccionado.</td>';
-    table.appendChild(row);
-    totalElem.textContent = 'Total: S/0';
-    button.disabled = true;
+
+  function formatPrice(value) {
+    return 'S/' + Number(value).toLocaleString('es-PE');
   }
-});
-</script>
-</body></html>
+
+  // FLUJO CORREGIDA: Empaqueta la información y redirecciona a la boleta final
+  function proceedToQuote() {
+    const clientInfo = JSON.parse(sessionStorage.getItem('clientInfo') || '{}');
+    const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+    
+    // Validación: Si el cliente intentó saltarse el paso anterior, lo regresamos a llenar sus datos
+    if (!clientInfo || !clientInfo.cliente || !clientInfo.evento || !clientInfo.fecha) {
+      alert('Faltan datos del cliente. Por favor, completa primero los datos de tu evento.');
+      location = 'cliente.html';
+      return;
+    }
+    
+    if (!cart || cart.length === 0) {
+      alert('El carrito está vacío. Agrega al menos un servicio del Catálogo.');
+      location = 'catalogo.html';
+      return;
+    }
+    
+    // Guardamos la cotización final armada en el navegador
+    const cotizacion = { clientInfo, cart };
+    sessionStorage.setItem('cotizacion', JSON.stringify(cotizacion));
+    
+    // Redirección directa al paso final del flujo
+    location = 'cotizacion.html';
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    checkLogin();
+    renderCart();
+  });
+
+  function saveCart(cart) {
+    sessionStorage.setItem('cart', JSON.stringify(cart));
+  }
+
+  function renderCart() {
+    const table = document.getElementById('cart-table');
+    const totalElem = document.getElementById('cart-total');
+    const button = document.getElementById('checkout-btn');
+    
+    while (table.rows.length > 1) table.deleteRow(1);
+    const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+    
+    if (cart && cart.length > 0) {
+      let subtotal = 0;
+      cart.forEach((it, idx) => {
+        const row = table.insertRow();
+        const cellItem = row.insertCell();
+        const cellQty = row.insertCell();
+        const cellPrice = row.insertCell();
+        const cellActions = row.insertCell();
+        
+        cellItem.style.padding = "12px";
+        cellQty.style.padding = "12px";
+        cellPrice.style.padding = "12px";
+        cellActions.style.padding = "12px";
+
+        cellItem.textContent = it.item;
+        
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number'; qtyInput.min = 1; qtyInput.value = it.qty || 1; qtyInput.style.width = '70px';
+        qtyInput.style.padding = '6px';
+        qtyInput.style.borderRadius = '8px';
+        qtyInput.addEventListener('change', function(){ updateQty(idx, Number(qtyInput.value)); });
+        cellQty.appendChild(qtyInput);
+        
+        cellPrice.textContent = formatPrice(it.price * (it.qty || 1));
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Eliminar';
+        removeBtn.className = 'btn-small';
+        removeBtn.style.padding = '6px 12px';
+        removeBtn.style.width = 'auto';
+        removeBtn.addEventListener('click', function(){ removeItem(idx); });
+        cellActions.appendChild(removeBtn);
+        
+        subtotal += Number(it.price) * Number(it.qty || 1);
+      });
+      totalElem.textContent = 'Total: ' + formatPrice(subtotal);
+      button.disabled = false;
+    } else {
+      const row = table.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 4;
+      cell.style.textAlign = 'center';
+      cell.style.padding = "20px";
+      cell.textContent = 'No hay ningún elemento seleccionado.';
+      totalElem.textContent = 'Total: S/0';
+      button.disabled = true;
+    }
+  }
+
+  function updateQty(index, newQty) {
+    if (!newQty || newQty < 1) return renderCart();
+    const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+    if (cart[index]) { cart[index].qty = Number(newQty); saveCart(cart); }
+    renderCart();
+  }
+
+  function removeItem(index) {
+    const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+    cart.splice(index,1);
+    saveCart(cart);
+    renderCart();
+  }
+  </script>
+</body>
+</html>
